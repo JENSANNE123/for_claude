@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repérage cartésien</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1d2433; --muted:#5b6475;
+    --grid:#cfd6e3; --grid2:#e9edf4; --axis:#1d2433;
+    --accent:#2563eb; --ok:#15803d; --okbg:#dcfce7; --bad:#dc2626; --badbg:#fee2e2;
+    --info:#1e40af; --infobg:#dbeafe; --pt:#e11d48; --proj:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;font-size:19px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 16px}
+  h1{font-size:1.35em;margin:0}
+  .sub{color:var(--muted);font-size:.8em;margin-top:2px}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:16px;padding:0 16px 16px;height:calc(100vh - 72px)}
+  .board{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;min-height:0;padding:6px}
+  svg{width:100%;height:100%;display:block}
+  .panel{display:flex;flex-direction:column;gap:12px;overflow:auto;min-height:0}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:14px 16px}
+  .card h2{font-size:.85em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
+  button{font:inherit;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;background:#e7ebf3;color:var(--ink)}
+  button:hover{filter:brightness(.96)}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .primary{background:var(--accent);color:#fff;font-weight:600}
+  .big{width:100%;font-size:1.15em;padding:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row > button{flex:1}
+  .levels button{flex:1;padding:8px 6px;font-size:.85em}
+  .levels button.active{background:var(--accent);color:#fff}
+  .lvl-desc{color:var(--muted);font-size:.8em;margin-top:8px;min-height:1.2em}
+  .question{font-size:1em;margin:0 0 10px}
+  .coords{display:flex;align-items:center;justify-content:center;gap:6px;font-size:1.7em;font-weight:600;margin-bottom:12px}
+  .coords input{width:3.6em;font:inherit;text-align:center;padding:6px 4px;border:2px solid var(--grid);border-radius:10px;background:#fbfcfe;color:var(--ink)}
+  .coords input.good{border-color:var(--ok);background:var(--okbg)}
+  .coords input.wrong{border-color:var(--bad);background:var(--badbg)}
+  .msg{border-radius:12px;padding:10px 12px;font-size:.95em;margin-top:10px;display:none;line-height:1.35}
+  .msg.ok{display:block;background:var(--okbg);color:var(--ok)}
+  .msg.bad{display:block;background:var(--badbg);color:var(--bad)}
+  .msg.info{display:block;background:var(--infobg);color:var(--info)}
+  label.opt{display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer;font-size:.95em}
+  label.opt input{width:22px;height:22px}
+  .score{display:flex;justify-content:space-around;text-align:center}
+  .score b{display:block;font-size:1.8em}
+  .score span{color:var(--muted);font-size:.8em}
+  .team{flex:1;border-radius:12px;padding:6px}
+  .team.turn{background:var(--infobg);outline:2px solid var(--accent)}
+  .keys{color:var(--muted);font-size:.75em;line-height:1.6}
+  kbd{background:#e7ebf3;border-radius:5px;padding:1px 6px;font-family:inherit}
+  /* SVG */
+  .minor{stroke:var(--grid2);stroke-width:1}
+  .major{stroke:var(--grid);stroke-width:1.2}
+  .axis{stroke:var(--axis);stroke-width:2.2}
+  .tick{stroke:var(--axis);stroke-width:2}
+  .num{font-size:16px;fill:var(--muted);font-family:inherit}
+  .axlbl{font-size:22px;font-style:italic;font-weight:600;fill:var(--axis)}
+  .ptlbl{font-size:26px;font-weight:700;fill:var(--pt)}
+  .projline{stroke-width:2.5;stroke-dasharray:7 6;fill:none}
+  .projval{font-size:19px;font-weight:700}
+  .pop{transform-box:fill-box;transform-origin:center;animation:pop .45s ease-out}
+  @keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.5)}100%{transform:scale(1)}}
+  .halo{transform-box:fill-box;transform-origin:center;animation:halo 1.6s ease-out infinite}
+  @keyframes halo{0%{transform:scale(1);opacity:.55}100%{transform:scale(3.2);opacity:0}}
+  @media (max-width:900px){
+    main{grid-template-columns:1fr;height:auto}
+    .board{aspect-ratio:1/1}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Repérage d'un point dans un repère cartésien</h1>
+    <div class="sub">Un point apparaît : la classe donne ses coordonnées, l'élève au bureau les saisit et vérifie.</div>
+  </div>
+  <button id="fs" title="Plein écran (F)">⛶ Plein écran</button>
+</header>
+
+<main>
+  <div class="board">
+    <svg id="svg" viewBox="0 0 600 600" aria-label="Repère orthonormé">
+      <defs>
+        <marker id="arrAxis" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/>
+        </marker>
+        <marker id="arrVec" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+        </marker>
+        <marker id="arrUnit" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#ea580c"/>
+        </marker>
+      </defs>
+      <g id="grid"></g>
+      <g id="units"></g>
+      <g id="dyn"></g>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <div class="card">
+      <h2>Niveau</h2>
+      <div class="row levels" id="levels">
+        <button data-l="1">1</button>
+        <button data-l="2" class="active">2</button>
+        <button data-l="3">3</button>
+        <button data-l="4">4</button>
+      </div>
+      <div class="lvl-desc" id="lvlDesc"></div>
+    </div>
+
+    <div class="card">
+      <button class="primary big" id="newBtn">✨ Nouveau point</button>
+      <div id="teamTurn" class="msg info" style="text-align:center;font-weight:600"></div>
+    </div>
+
+    <div class="card">
+      <p class="question" id="question">Cliquez sur « Nouveau point » pour commencer.</p>
+      <div class="coords">
+        <span id="ptName">M</span>
+        <span>(</span>
+        <input id="inX" type="text" inputmode="decimal" autocomplete="off" aria-label="abscisse x" placeholder="x">
+        <span>;</span>
+        <input id="inY" type="text" inputmode="decimal" autocomplete="off" aria-label="ordonnée y" placeholder="y">
+        <span>)</span>
+      </div>
+      <div class="row">
+        <button class="primary" id="checkBtn">✔ Vérifier</button>
+        <button id="revealBtn">👁 Révéler</button>
+      </div>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Affichage</h2>
+      <label class="opt"><input type="checkbox" id="optUnits" checked> Vecteurs unitaires <i>i</i> et <i>j</i></label>
+      <label class="opt"><input type="checkbox" id="optVec"> Vecteur <b>OM</b> (après réponse)</label>
+      <label class="opt"><input type="checkbox" id="optTeams"> Mode équipes (A contre B)</label>
+    </div>
+
+    <div class="card">
+      <h2>Score</h2>
+      <div class="score" id="soloScore">
+        <div><b id="sOk">0</b><span>réussis</span></div>
+        <div><b id="sFirst">0</b><span>du 1er coup</span></div>
+        <div><b id="sTot">0</b><span>points posés</span></div>
+      </div>
+      <div class="score" id="teamScore" style="display:none">
+        <div class="team" id="tA"><b id="scA">0</b><span>Équipe A</span></div>
+        <div class="team" id="tB"><b id="scB">0</b><span>Équipe B</span></div>
+      </div>
+      <div class="row" style="margin-top:10px"><button id="resetBtn">↺ Remettre à zéro</button></div>
+    </div>
+
+    <div class="card keys">
+      Raccourcis : <kbd>N</kbd> nouveau point · <kbd>Entrée</kbd> vérifier · <kbd>R</kbd> révéler · <kbd>F</kbd> plein écran<br>
+      La virgule est acceptée : <kbd>-2,5</kbd> ou <kbd>-2.5</kbd>
+    </div>
+  </div>
+</main>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const S = 600, PAD = 40, R = 6, U = (S - 2 * PAD) / (2 * R);
+const X = x => S / 2 + x * U;
+const Y = y => S / 2 - y * U;
+const $ = id => document.getElementById(id);
+
+const LEVELS = {
+  1: 'Coordonnées entières positives (1er quadrant).',
+  2: 'Coordonnées entières, positives ou négatives (4 quadrants).',
+  3: 'Coordonnées au demi près (ex. 2,5 ou −1,5).',
+  4: 'Défi : coordonnées entières, sans quadrillage.'
+};
+const NAMES = ['M', 'A', 'B', 'C', 'D', 'E', 'N', 'P'];
+
+let level = 2, pt = null, tries = 0, done = false;
+const score = { ok: 0, first: 0, tot: 0 };
+const teams = { A: 0, B: 0, turn: 'A' };
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(x, y, s, attrs, parent) {
+  const t = el('text', Object.assign({ x, y }, attrs), parent);
+  t.textContent = s;
+  return t;
+}
+// Format français : virgule décimale et vrai signe moins
+const fmt = n => (Number.isInteger(n) ? String(n) : n.toFixed(1)).replace('.', ',').replace('-', '−');
+
+function drawGrid() {
+  const g = $('grid');
+  g.innerHTML = '';
+  if (level === 3) {
+    for (let k = -2 * R + 1; k < 2 * R; k += 2) {
+      const v = k / 2;
+      el('line', { x1: X(v), y1: Y(-R), x2: X(v), y2: Y(R), class: 'minor' }, g);
+      el('line', { x1: X(-R), y1: Y(v), x2: X(R), y2: Y(v), class: 'minor' }, g);
+    }
+  }
+  if (level !== 4) {
+    for (let v = -R; v <= R; v++) {
+      if (v === 0) continue;
+      el('line', { x1: X(v), y1: Y(-R), x2: X(v), y2: Y(R), class: 'major' }, g);
+      el('line', { x1: X(-R), y1: Y(v), x2: X(R), y2: Y(v), class: 'major' }, g);
+    }
+  }
+  el('line', { x1: X(-R) - 10, y1: Y(0), x2: X(R) + 22, y2: Y(0), class: 'axis', 'marker-end': 'url(#arrAxis)' }, g);
+  el('line', { x1: X(0), y1: Y(-R) + 10, x2: X(0), y2: Y(R) - 22, class: 'axis', 'marker-end': 'url(#arrAxis)' }, g);
+  for (let v = -R; v <= R; v++) {
+    if (v === 0) continue;
+    el('line', { x1: X(v), y1: Y(0) - 5, x2: X(v), y2: Y(0) + 5, class: 'tick' }, g);
+    el('line', { x1: X(0) - 5, y1: Y(v), x2: X(0) + 5, y2: Y(v), class: 'tick' }, g);
+    txt(X(v), Y(0) + 22, fmt(v), { class: 'num', 'text-anchor': 'middle' }, g);
+    txt(X(0) - 10, Y(v) + 5, fmt(v), { class: 'num', 'text-anchor': 'end' }, g);
+  }
+  txt(X(0) - 12, Y(0) + 22, 'O', { class: 'axlbl', 'text-anchor': 'end' }, g);
+  txt(X(R) + 10, Y(0) - 12, 'x', { class: 'axlbl' }, g);
+  txt(X(0) + 12, Y(R) - 6, 'y', { class: 'axlbl' }, g);
+}
+
+// Lettre surmontée d'une petite flèche (notation vectorielle)
+function vecLabel(x, y, s, color, parent, size = 22) {
+  txt(x, y, s, { 'font-size': size, 'font-style': 'italic', 'font-weight': 700, fill: color, 'text-anchor': 'middle' }, parent);
+  const w = size * 0.32 * Math.max(1, s.length), top = y - size * 0.95;
+  el('line', { x1: x - w, y1: top, x2: x + w, y2: top, stroke: color, 'stroke-width': 2 }, parent);
+  el('path', { d: `M${x + w - 5},${top - 4} L${x + w},${top} L${x + w - 5},${top + 4}`, stroke: color, 'stroke-width': 2, fill: 'none' }, parent);
+}
+
+function drawUnits() {
+  const g = $('units');
+  g.innerHTML = '';
+  if (!$('optUnits').checked) return;
+  const c = '#ea580c';
+  el('line', { x1: X(0), y1: Y(0), x2: X(1), y2: Y(0), stroke: c, 'stroke-width': 3.5, 'marker-end': 'url(#arrUnit)' }, g);
+  el('line', { x1: X(0), y1: Y(0), x2: X(0), y2: Y(1), stroke: c, 'stroke-width': 3.5, 'marker-end': 'url(#arrUnit)' }, g);
+  vecLabel(X(0.5), Y(0) - 12, 'i', c, g, 20);
+  vecLabel(X(0) - 16, Y(0.5) + 8, 'j', c, g, 20);
+}
+
+function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+
+function generate() {
+  let x, y;
+  do {
+    if (level === 1) { x = randInt(1, 5); y = randInt(1, 5); }
+    else if (level === 3) {
+      do { x = randInt(-10, 10) / 2; y = randInt(-10, 10) / 2; } while (Number.isInteger(x) && Number.isInteger(y));
+    } else { x = randInt(-5, 5); y = randInt(-5, 5); }
+  } while ((x === 0 && y === 0) || (pt && pt.x === x && pt.y === y));
+  return { x, y, name: NAMES[randInt(0, NAMES.length - 1)] };
+}
+
+function drawPoint(p, parent) {
+  const g = el('g', {}, parent);
+  el('circle', { cx: X(p.x), cy: Y(p.y), r: 9, fill: 'none', stroke: 'var(--pt)', 'stroke-width': 3, class: 'halo' }, g);
+  el('circle', { cx: X(p.x), cy: Y(p.y), r: 9, fill: 'var(--pt)', stroke: '#fff', 'stroke-width': 2.5, class: 'pop' }, g);
+  const dx = p.x >= 0 ? 14 : -14, dy = p.y >= 0 ? -14 : 30;
+  txt(X(p.x) + dx, Y(p.y) + dy, p.name, { class: 'ptlbl', 'text-anchor': p.x >= 0 ? 'start' : 'end' }, g);
+}
+
+function drawProjections(p, color, withValues, parent) {
+  const g = el('g', {}, parent);
+  el('path', { d: `M${X(p.x)},${Y(p.y)} L${X(p.x)},${Y(0)}`, class: 'projline', stroke: color }, g);
+  el('path', { d: `M${X(p.x)},${Y(p.y)} L${X(0)},${Y(p.y)}`, class: 'projline', stroke: color }, g);
+  el('circle', { cx: X(p.x), cy: Y(0), r: 6, fill: color }, g);
+  el('circle', { cx: X(0), cy: Y(p.y), r: 6, fill: color }, g);
+  if (!withValues) return;
+  // Étiquettes du côté opposé au point pour ne pas chevaucher les pointillés
+  const lx = X(p.x), ly = p.y >= 0 ? Y(0) + 46 : Y(0) - 30;
+  const xl = txt(lx, ly, `x = ${fmt(p.x)}`, { class: 'projval', fill: color, 'text-anchor': 'middle' }, g);
+  const yl = txt(p.x >= 0 ? X(0) - 44 : X(0) + 44, Y(p.y) + 6, `y = ${fmt(p.y)}`,
+    { class: 'projval', fill: color, 'text-anchor': p.x >= 0 ? 'end' : 'start' }, g);
+  [xl, yl].forEach(t => {
+    const b = t.getBBox();
+    const bg = el('rect', { x: b.x - 5, y: b.y - 2, width: b.width + 10, height: b.height + 4, rx: 6, fill: '#fff', opacity: .92 });
+    g.insertBefore(bg, t);
+  });
+}
+
+function drawVectorOM(p, parent) {
+  if (!$('optVec').checked) return;
+  const c = '#2563eb';
+  el('line', { x1: X(0), y1: Y(0), x2: X(p.x), y2: Y(p.y), stroke: c, 'stroke-width': 3.5, 'marker-end': 'url(#arrVec)' }, parent);
+  const mx = (X(0) + X(p.x)) / 2, my = (Y(0) + Y(p.y)) / 2;
+  const n = Math.hypot(p.x, p.y);
+  vecLabel(mx - (p.y / n) * 26, my - (p.x / n) * 26 + 8, 'O' + p.name, c, parent, 20);
+}
+
+let lastState = {};
+function render(state) {
+  lastState = state;
+  const g = $('dyn');
+  g.innerHTML = '';
+  if (!pt) return;
+  if (state.ghost) {
+    const q = state.ghost;
+    if (Math.abs(q.x) <= R && Math.abs(q.y) <= R) {
+      el('circle', { cx: X(q.x), cy: Y(q.y), r: 10, fill: 'none', stroke: 'var(--bad)', 'stroke-width': 3, 'stroke-dasharray': '4 3' }, g);
+      txt(X(q.x) + 14, Y(q.y) + 28, `votre réponse`, { 'font-size': 15, fill: 'var(--bad)', 'font-weight': 600 }, g);
+    }
+  }
+  if (state.hint) drawProjections(pt, 'var(--proj)', false, g);
+  if (state.solved || state.revealed) {
+    drawProjections(pt, state.solved ? 'var(--ok)' : 'var(--proj)', true, g);
+    drawVectorOM(pt, g);
+  }
+  drawPoint(pt, g);
+}
+
+function setMsg(kind, html) {
+  const m = $('msg');
+  m.className = 'msg ' + kind;
+  m.innerHTML = html;
+}
+function clearMsg() { $('msg').className = 'msg'; }
+
+function parse(s) {
+  s = s.trim().replace(',', '.').replace('−', '-').replace(/\s+/g, '');
+  if (s === '' || isNaN(Number(s))) return null;
+  return Number(s);
+}
+
+function newPoint() {
+  if (pt && $('optTeams').checked && score.tot > 0) teams.turn = teams.turn === 'A' ? 'B' : 'A';
+  pt = generate();
+  tries = 0; done = false;
+  score.tot++;
+  $('ptName').textContent = pt.name;
+  $('question').innerHTML = `Quelles sont les coordonnées du point <b style="color:var(--pt)">${pt.name}</b> ?`;
+  ['inX', 'inY'].forEach(id => { const i = $(id); i.value = ''; i.className = ''; });
+  clearMsg();
+  render({});
+  updateScore();
+  $('inX').focus();
+}
+
+function check() {
+  if (!pt) { newPoint(); return; }
+  if (done) return;
+  const x = parse($('inX').value), y = parse($('inY').value);
+  if (x === null || y === null) {
+    setMsg('info', 'Écrivez les deux coordonnées : d\'abord <b>x</b> (abscisse), puis <b>y</b> (ordonnée).');
+    return;
+  }
+  tries++;
+  const okX = Math.abs(x - pt.x) < 1e-9, okY = Math.abs(y - pt.y) < 1e-9;
+  $('inX').className = okX ? 'good' : 'wrong';
+  $('inY').className = okY ? 'good' : 'wrong';
+
+  if (okX && okY) {
+    done = true;
+    score.ok++;
+    if (tries === 1) score.first++;
+    if ($('optTeams').checked) teams[teams.turn] += tries === 1 ? 2 : 1;
+    const bravo = tries === 1 ? 'Bravo, du premier coup !' : 'Bravo !';
+    setMsg('ok', `🎉 ${bravo} <b>${pt.name}(${fmt(pt.x)} ; ${fmt(pt.y)})</b><br>
+      L'abscisse se lit sur l'axe (Ox), l'ordonnée sur l'axe (Oy).`);
+    render({ solved: true });
+    updateScore();
+    return;
+  }
+
+  let advice;
+  if (!okX && !okY && Math.abs(x - pt.y) < 1e-9 && Math.abs(y - pt.x) < 1e-9) {
+    advice = '🔄 Attention : vous avez <b>inversé x et y</b> ! On écrit toujours (abscisse ; ordonnée).';
+  } else if ((!okX && Math.abs(x + pt.x) < 1e-9) || (!okY && Math.abs(y + pt.y) < 1e-9)) {
+    advice = '➖ Vérifiez le <b>signe</b> : le point est-il à gauche ou à droite de O ? En haut ou en bas ?';
+  } else if (!okX && okY) {
+    advice = '✔ L\'ordonnée y est juste. ✘ L\'abscisse x est fausse : projetez le point sur l\'axe (Ox).';
+  } else if (okX && !okY) {
+    advice = '✔ L\'abscisse x est juste. ✘ L\'ordonnée y est fausse : projetez le point sur l\'axe (Oy).';
+  } else {
+    advice = '✘ Les deux coordonnées sont fausses. Projetez le point sur chaque axe.';
+  }
+  const hint = tries >= 2;
+  if (hint) advice += '<br>💡 Aide : les projections du point sur les axes sont tracées en pointillés.';
+  setMsg('bad', advice);
+  render({ ghost: { x, y }, hint });
+}
+
+function reveal() {
+  if (!pt || done) return;
+  done = true;
+  setMsg('info', `La réponse est <b>${pt.name}(${fmt(pt.x)} ; ${fmt(pt.y)})</b>.<br>
+    On projette ${pt.name} sur (Ox) pour lire x, puis sur (Oy) pour lire y.`);
+  $('inX').value = fmt(pt.x); $('inY').value = fmt(pt.y);
+  render({ revealed: true });
+}
+
+function updateScore() {
+  const t = $('optTeams').checked;
+  $('soloScore').style.display = t ? 'none' : 'flex';
+  $('teamScore').style.display = t ? 'flex' : 'none';
+  $('sOk').textContent = score.ok;
+  $('sFirst').textContent = score.first;
+  $('sTot').textContent = score.tot;
+  $('scA').textContent = teams.A;
+  $('scB').textContent = teams.B;
+  $('tA').classList.toggle('turn', teams.turn === 'A');
+  $('tB').classList.toggle('turn', teams.turn === 'B');
+  const tt = $('teamTurn');
+  if (t) { tt.className = 'msg info'; tt.textContent = `C'est au tour de l'équipe ${teams.turn}`; }
+  else tt.className = 'msg';
+}
+
+function setLevel(l) {
+  level = l;
+  document.querySelectorAll('#levels button').forEach(b => b.classList.toggle('active', +b.dataset.l === l));
+  $('lvlDesc').textContent = LEVELS[l];
+  drawGrid();
+  if (pt) newPoint();
+}
+
+function toggleFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+}
+
+document.querySelectorAll('#levels button').forEach(b => b.addEventListener('click', () => setLevel(+b.dataset.l)));
+$('newBtn').addEventListener('click', newPoint);
+$('checkBtn').addEventListener('click', check);
+$('revealBtn').addEventListener('click', reveal);
+$('fs').addEventListener('click', toggleFullscreen);
+$('optUnits').addEventListener('change', drawUnits);
+$('optVec').addEventListener('change', () => render(lastState));
+$('optTeams').addEventListener('change', updateScore);
+$('resetBtn').addEventListener('click', () => {
+  score.ok = score.first = score.tot = 0;
+  teams.A = teams.B = 0; teams.turn = 'A';
+  updateScore();
+});
+['inX', 'inY'].forEach(id => $(id).addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); if (done) newPoint(); else check(); }
+}));
+$('inX').addEventListener('keydown', e => { if (e.key === ';') { e.preventDefault(); $('inY').focus(); } });
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (k === 'n') newPoint();
+  else if (k === 'r') reveal();
+  else if (k === 'f') toggleFullscreen();
+  else if (k === 'enter') { done || !pt ? newPoint() : check(); }
+});
+
+setLevel(2);
+drawUnits();
+</script>
+</body>
+</html>
