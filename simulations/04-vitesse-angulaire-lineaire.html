@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vitesse angulaire et vitesse linéaire</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1d2433; --muted:#5b6475;
+    --accent:#2563eb; --ok:#15803d; --okbg:#dcfce7; --bad:#dc2626; --badbg:#fee2e2;
+    --info:#1e40af; --infobg:#dbeafe; --axis:#1d2433;
+    --cA:#2563eb; --cB:#d97706; --cC:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;font-size:19px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 16px}
+  h1{font-size:1.3em;margin:0}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;padding:0 16px 16px;height:calc(100vh - 64px)}
+  .board{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;min-height:0;padding:6px}
+  svg{width:100%;height:100%;display:block}
+  .panel{display:flex;flex-direction:column;gap:12px;overflow:auto;min-height:0}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:14px 16px}
+  .card h2{font-size:.85em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
+  button{font:inherit;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;background:#e7ebf3;color:var(--ink)}
+  button:hover{filter:brightness(.96)}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .primary{background:var(--accent);color:#fff;font-weight:600}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row > button{flex:1}
+  .tabs button.active{background:var(--accent);color:#fff}
+  .tabs button{flex:1;padding:10px 4px}
+  .slider{display:flex;align-items:center;gap:12px;font-size:1.1em;font-weight:600}
+  .slider input{flex:1;accent-color:var(--accent);height:28px}
+  .omega{font-variant-numeric:tabular-nums;min-width:4.6em;text-align:right}
+  .ctrl{display:flex;gap:8px;margin-top:10px}
+  .ctrl button{flex:1;font-size:1.05em}
+  .rider{display:flex;align-items:center;gap:10px;margin:10px 0}
+  .dot{width:20px;height:20px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
+  .rname{font-weight:700;width:1.3em}
+  .rR{color:var(--muted);font-size:.85em;width:3.6em}
+  .bar-wrap{flex:1;background:#eef1f7;border-radius:8px;height:22px;position:relative;overflow:hidden}
+  .bar{height:100%;border-radius:8px;transition:width .15s linear}
+  .rv{font-weight:700;font-variant-numeric:tabular-nums;width:4.6em;text-align:right}
+  .omegaline{text-align:center;background:var(--infobg);color:var(--info);border-radius:10px;padding:8px;font-weight:600;margin-bottom:6px}
+  .finish{font-variant-numeric:tabular-nums;font-weight:700}
+  .quiz button{font-weight:700}
+  .quiz button.good{background:var(--ok);color:#fff}
+  .quiz button.bad{background:var(--bad);color:#fff}
+  .qmsg{border-radius:12px;padding:10px 12px;margin-top:10px;display:none;font-weight:600;line-height:1.4}
+  .qmsg.ok{display:block;background:var(--okbg);color:var(--ok)}
+  .qmsg.bad{display:block;background:var(--badbg);color:var(--bad)}
+  .hide{display:none !important}
+  .lbl{font-size:21px;font-weight:700}
+  .num{font-size:14px;fill:#94a3b8}
+  @media (max-width:900px){
+    main{grid-template-columns:1fr;height:auto}
+    .board{aspect-ratio:1/1}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Vitesse angulaire ω et vitesse linéaire v</h1>
+  <button id="fs" title="Plein écran (F)">⛶ Plein écran</button>
+</header>
+
+<main>
+  <div class="board">
+    <svg id="svg" viewBox="0 0 600 600" aria-label="Manège">
+      <defs>
+        <marker id="arrV" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/>
+        </marker>
+      </defs>
+      <g id="dyn"></g>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <div class="card">
+      <div class="row tabs" id="tabs">
+        <button data-m="manege" class="active">🎡 Manège</button>
+        <button data-m="course">🏁 Course</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="slider"><span>ω</span><input type="range" id="omegaSlider" min="0.2" max="2.4" step="0.1" value="1"><span class="omega" id="omegaVal">1,0 rad/s</span></div>
+      <div class="ctrl">
+        <button class="primary" id="playBtn">▶ Lancer</button>
+        <button id="resetBtn">↺ Réinitialiser</button>
+      </div>
+    </div>
+
+    <div class="card" id="manegePanel">
+      <div class="omegaline">La plateforme tourne à <b>la même ω</b> pour A, B et C</div>
+      <div id="riders"></div>
+    </div>
+
+    <div class="card hide" id="coursePanel">
+      <h2>Course en ligne droite (piste de 6 m)</h2>
+      <div id="raceRows"></div>
+      <div class="row" style="margin-top:8px"><button id="raceGo">🏁 Go !</button></div>
+    </div>
+
+    <div class="card">
+      <h2>🎯 Qui a la plus grande vitesse v ?</h2>
+      <div class="row quiz" id="quiz">
+        <button data-p="A">A</button>
+        <button data-p="B">B</button>
+        <button data-p="C">C</button>
+        <button data-p="=">Tous pareils</button>
+      </div>
+      <div class="qmsg" id="qmsg"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const CX = 300, CY = 300, PXPM = 62, ARROWSCALE = 17;
+const $ = id => document.getElementById(id);
+
+const RIDERS = [
+  { id: 'A', R: 1, color: '#2563eb' },
+  { id: 'B', R: 2, color: '#d97706' },
+  { id: 'C', R: 3, color: '#dc2626' }
+];
+const RACE_D = 6;          // mètres, piste de course
+const RACE_PX = 460, RACE_X0 = 72;
+
+let mode = 'manege', running = false, theta = 0, omega = 1.0;
+let raceDist = { A: 0, B: 0, C: 0 }, raceTime = { A: null, B: null, C: null }, raceT = 0, raceRunning = false;
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(x, y, s, attrs, parent) {
+  const t = el('text', Object.assign({ x, y }, attrs), parent);
+  t.textContent = s;
+  return t;
+}
+const fmt = (n, d = 1) => n.toFixed(d).replace('.', ',');
+const P = (a, r) => [CX + r * Math.cos(a), CY - r * Math.sin(a)];
+function arcPath(a1, a2, r) {
+  const [x1, y1] = P(a1, r), [x2, y2] = P(a2, r);
+  return `M${x1},${y1} A${r},${r} 0 ${a2 - a1 > Math.PI ? 1 : 0} 0 ${x2},${y2}`;
+}
+const v = r => r.R * omega;
+
+/* ---------- Vue manège ---------- */
+function drawManege() {
+  const g = $('dyn');
+  g.innerHTML = '';
+  RIDERS.forEach(r => el('circle', { cx: CX, cy: CY, r: r.R * PXPM, fill: 'none', stroke: '#e2e8f0', 'stroke-width': 1.5 }, g));
+
+  const outer = RIDERS[RIDERS.length - 1].R * PXPM;
+  el('path', { d: arcPath(theta - 0.6, theta, outer), fill: '#94a3b8', opacity: .12 }, g);
+  el('line', { x1: CX, y1: CY, x2: CX + outer * Math.cos(theta), y2: CY - outer * Math.sin(theta), stroke: '#94a3b8', 'stroke-width': 2.5 }, g);
+
+  RIDERS.forEach(r => {
+    const rp = r.R * PXPM;
+    el('path', { d: arcPath(theta - 0.6, theta, rp), stroke: r.color, 'stroke-width': 7, fill: 'none', opacity: .5, 'stroke-linecap': 'round' }, g);
+    const [x, y] = P(theta, rp);
+    const vel = v(r), tx = -Math.sin(theta), ty = -Math.cos(theta);
+    el('line', { x1: x, y1: y, x2: x + vel * ARROWSCALE * tx, y2: y + vel * ARROWSCALE * ty, stroke: r.color, 'stroke-width': 3.5, 'marker-end': 'url(#arrV)' }, g);
+    el('circle', { cx: x, cy: y, r: 13, fill: r.color, stroke: '#fff', 'stroke-width': 3 }, g);
+    txt(x, y + 6, r.id, { 'font-size': 15, 'font-weight': 800, fill: '#fff', 'text-anchor': 'middle' }, g);
+  });
+  el('circle', { cx: CX, cy: CY, r: 5, fill: 'var(--axis)' }, g);
+  txt(CX - 12, CY + 24, 'O', { class: 'lbl', 'font-style': 'italic', 'text-anchor': 'end' }, g);
+}
+
+/* ---------- Vue course ---------- */
+function drawCourse() {
+  const g = $('dyn');
+  g.innerHTML = '';
+  const ys = { A: 150, B: 300, C: 450 };
+  RIDERS.forEach(r => {
+    const y = ys[r.id];
+    el('rect', { x: RACE_X0 - 10, y: y - 42, width: RACE_PX + 40, height: 84, fill: r.id === 'B' ? '#f8fafc' : '#ffffff' }, g);
+    el('line', { x1: RACE_X0, y1: y, x2: RACE_X0 + RACE_PX, y2: y, stroke: '#cbd5e1', 'stroke-width': 2 }, g);
+    for (let m = 0; m <= RACE_D; m++) {
+      const x = RACE_X0 + (m / RACE_D) * RACE_PX;
+      el('line', { x1: x, y1: y - 6, x2: x, y2: y + 6, stroke: '#cbd5e1', 'stroke-width': 1.5 }, g);
+    }
+    const d = Math.min(raceDist[r.id], RACE_D);
+    const xr = RACE_X0 + (d / RACE_D) * RACE_PX;
+    el('line', { x1: RACE_X0, y1: y, x2: xr, y2: y, stroke: r.color, 'stroke-width': 6, opacity: .35 }, g);
+    el('circle', { cx: xr, cy: y, r: 14, fill: r.color, stroke: '#fff', 'stroke-width': 3 }, g);
+    txt(xr, y + 6, r.id, { 'font-size': 15, 'font-weight': 800, fill: '#fff', 'text-anchor': 'middle' }, g);
+    txt(RACE_X0 - 24, y + 6, r.id, { class: 'lbl', fill: r.color }, g);
+    if (raceTime[r.id] !== null) txt(RACE_X0 + RACE_PX + 20, y + 6, fmt(raceTime[r.id], 1) + ' s', { class: 'finish', fill: r.color }, g);
+  });
+  // ligne d'arrivée
+  for (let y = 108; y < 500; y += 14) el('rect', { x: RACE_X0 + RACE_PX - 4, y, width: 8, height: 7, fill: (Math.round(y / 14)) % 2 ? '#1d2433' : '#fff' }, g);
+}
+
+function render() {
+  if (mode === 'manege') drawManege(); else drawCourse();
+  updateReadouts();
+}
+
+/* ---------- Lecture (panneau latéral) ---------- */
+function buildRidersPanel() {
+  $('riders').innerHTML = RIDERS.map(r => `
+    <div class="rider">
+      <div class="dot" style="background:${r.color}"></div>
+      <div class="rname">${r.id}</div>
+      <div class="rR">R=${r.R} m</div>
+      <div class="bar-wrap"><div class="bar" id="bar${r.id}" style="background:${r.color}"></div></div>
+      <div class="rv" id="rv${r.id}"></div>
+    </div>`).join('');
+}
+function updateReadouts() {
+  $('omegaVal').textContent = fmt(omega) + ' rad/s';
+  if (mode === 'manege') {
+    const vmax = RIDERS[RIDERS.length - 1].R * 2.4;
+    RIDERS.forEach(r => {
+      const vel = v(r);
+      $('bar' + r.id).style.width = Math.min(100, (vel / vmax) * 100) + '%';
+      $('rv' + r.id).textContent = fmt(vel) + ' m/s';
+    });
+  } else {
+    $('raceRows').innerHTML = RIDERS.map(r => {
+      const vel = v(r), d = Math.min(raceDist[r.id], RACE_D);
+      const done = raceTime[r.id] !== null;
+      return `<div class="rider">
+        <div class="dot" style="background:${r.color}"></div>
+        <div class="rname">${r.id}</div>
+        <div class="rv" style="width:4.8em">${fmt(vel)} m/s</div>
+        <div style="flex:1;color:var(--muted);font-size:.85em">${fmt(d, 1)} / ${RACE_D} m</div>
+        ${done ? `<div class="finish" style="color:${r.color}">${fmt(raceTime[r.id], 1)} s</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+}
+
+/* ---------- Animation ---------- */
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (running) {
+    theta = (theta + omega * dt) % (2 * Math.PI);
+    if (mode === 'course') {
+      let anyGoing = false;
+      RIDERS.forEach(r => {
+        if (raceTime[r.id] === null) {
+          raceT += 0; // placeholder, real timer below per-rider uses global raceT
+        }
+      });
+      raceT += dt;
+      RIDERS.forEach(r => {
+        if (raceTime[r.id] === null) {
+          raceDist[r.id] = Math.min(RACE_D, raceDist[r.id] + v(r) * dt);
+          anyGoing = true;
+          if (raceDist[r.id] >= RACE_D - 1e-6) raceTime[r.id] = raceT;
+        }
+      });
+      if (!anyGoing) { running = false; syncPlay(); }
+    }
+    render();
+  }
+  requestAnimationFrame(loop);
+}
+function syncPlay() { $('playBtn').textContent = running ? '⏸ Pause' : '▶ Lancer'; }
+
+/* ---------- Contrôles ---------- */
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.m === m));
+  $('manegePanel').classList.toggle('hide', m !== 'manege');
+  $('coursePanel').classList.toggle('hide', m !== 'course');
+  render();
+}
+function resetAll() {
+  theta = 0; running = false; syncPlay();
+  raceDist = { A: 0, B: 0, C: 0 }; raceTime = { A: null, B: null, C: null }; raceT = 0;
+  render();
+}
+function toggleFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+}
+
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
+$('omegaSlider').addEventListener('input', e => { omega = +e.target.value; render(); });
+$('playBtn').addEventListener('click', () => { running = !running; syncPlay(); });
+$('resetBtn').addEventListener('click', resetAll);
+$('raceGo').addEventListener('click', () => {
+  raceDist = { A: 0, B: 0, C: 0 }; raceTime = { A: null, B: null, C: null }; raceT = 0;
+  running = true; syncPlay(); render();
+});
+$('fs').addEventListener('click', toggleFullscreen);
+document.querySelectorAll('#quiz button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#quiz button').forEach(x => x.classList.remove('good', 'bad'));
+  const correct = 'C';   // le plus loin du centre a toujours la plus grande vitesse, quelle que soit ω
+  const ok = b.dataset.p === correct;
+  b.classList.add(ok ? 'good' : 'bad');
+  const m = $('qmsg');
+  m.className = 'qmsg ' + (ok ? 'ok' : 'bad');
+  m.innerHTML = ok
+    ? `✔ Oui ! ω est la même pour A, B, C, mais v = R·ω. Plus R est grand, plus v est grand.`
+    : `✘ C'est <b>C</b> (le plus loin du centre). Même ω pour tous, mais v = R·ω : v augmente avec R.`;
+}));
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (e.target.tagName === 'BUTTON' && (k === 'enter' || k === ' ')) return;
+  if (k === ' ') { e.preventDefault(); running = !running; syncPlay(); }
+  else if (k === 'r') resetAll();
+  else if (k === 'f') toggleFullscreen();
+});
+
+buildRidersPanel();
+render();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
