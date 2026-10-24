@@ -51,9 +51,6 @@
   .msg.ok{display:block;background:var(--okbg);color:var(--ok)}
   .msg.bad{display:block;background:var(--badbg);color:var(--bad)}
   .msg.info{display:block;background:var(--infobg);color:var(--info)}
-  .score{display:flex;justify-content:space-around;text-align:center}
-  .score b{display:block;font-size:1.8em}
-  .score span{color:var(--muted);font-size:.8em}
   /* SVG */
   .layer{transition:opacity .9s ease}
   .minor{stroke:var(--grid2);stroke-width:1}
@@ -82,7 +79,6 @@
 <header>
   <div>
     <h1>Repérer un point : (x ; y) ou (r ; θ)</h1>
-    <div class="sub">Le même point, deux façons de le repérer.</div>
   </div>
   <button id="fs" title="Plein écran (F)">⛶ Plein écran</button>
 </header>
@@ -149,15 +145,6 @@
       <div class="msg" id="msg"></div>
     </div>
 
-    <div class="card">
-      <h2>Score</h2>
-      <div class="score">
-        <div><b id="sOk">0</b><span>réussis</span></div>
-        <div><b id="sFirst">0</b><span>du 1er coup</span></div>
-        <div><b id="sTot">0</b><span>points</span></div>
-      </div>
-      <div class="row" style="margin-top:10px"><button id="resetBtn">↺ Remettre à zéro</button></div>
-    </div>
   </div>
 </main>
 
@@ -178,7 +165,6 @@ const NAMES = ['M', 'A', 'B', 'C', 'D', 'E', 'N', 'P'];
 
 let sys = 'cart', level = 2, pt = null, tries = 0, done = false, active = 'in1';
 let view = {};
-const score = { ok: 0, first: 0, tot: 0 };
 
 function el(tag, attrs, parent) {
   const e = document.createElementNS(NS, tag);
@@ -219,15 +205,15 @@ function drawGrids() {
     }
   }
 
-  for (let r = 1; r <= R; r++) el('circle', { cx: C, cy: C, r: r * U, class: 'ring' }, gp);
+  for (let r = 1; r <= 5; r++) el('circle', { cx: C, cy: C, r: r * U, class: 'ring' }, gp);
   const step = STEP[level];
   for (let a = 0; a < 360; a += step) {
-    const [x, y] = P(R, a);
+    const [x, y] = P(5, a);
     if (a % 90) el('line', { x1: C, y1: C, x2: x, y2: y, class: 'ray' }, gp);
   }
   const lstep = Math.max(step, 30);
   for (let a = 0; a < 360; a += (level === 2 ? 45 : lstep)) {
-    const [x, y] = P(R - 0.55, a % 90 ? a : a + 7);   // décalé pour ne pas cacher les graduations des axes
+    const [x, y] = P(5.6, a % 90 ? a : a + 6);   // décalé pour ne pas cacher l'axe
     withBg(txt(x, y + 6, a + '°', { class: 'deg', 'text-anchor': 'middle' }, gp), gp);
   }
 
@@ -235,14 +221,15 @@ function drawGrids() {
   el('line', { x1: X(0), y1: Y(-R) + 10, x2: X(0), y2: Y(R) - 22, class: 'axis', 'marker-end': 'url(#arrAxis)' }, ga);
   for (let v = -R; v <= R; v++) {
     if (v === 0) continue;
-    el('line', { x1: X(v), y1: Y(0) - 5, x2: X(v), y2: Y(0) + 5, class: 'tick' }, ga);
-    el('line', { x1: X(0) - 5, y1: Y(v), x2: X(0) + 5, y2: Y(v), class: 'tick' }, ga);
-    txt(X(v), Y(0) + 22, fmt(v), { class: 'num', 'text-anchor': 'middle' }, ga);
-    txt(X(0) - 10, Y(v) + 5, fmt(v), { class: 'num', 'text-anchor': 'end' }, ga);
+    el('line', { x1: X(v), y1: Y(0) - 5, x2: X(v), y2: Y(0) + 5, class: 'tick' }, gc);
+    el('line', { x1: X(0) - 5, y1: Y(v), x2: X(0) + 5, y2: Y(v), class: 'tick' }, gc);
+    txt(X(v), Y(0) + 22, fmt(v), { class: 'num', 'text-anchor': 'middle' }, gc);
+    txt(X(0) - 10, Y(v) + 5, fmt(v), { class: 'num', 'text-anchor': 'end' }, gc);
   }
+  txt(X(R) + 10, Y(0) - 12, 'x', { class: 'axlbl' }, gc);
+  txt(X(0) + 12, Y(R) - 6, 'y', { class: 'axlbl' }, gc);
+  for (let r = 1; r <= 5; r++) txt(X(r) + 4, Y(0) + 22, r, { class: 'num', 'text-anchor': 'start' }, gp);
   txt(X(0) - 12, Y(0) + 22, 'O', { class: 'axlbl', 'text-anchor': 'end' }, ga);
-  txt(X(R) + 10, Y(0) - 12, 'x', { class: 'axlbl' }, ga);
-  txt(X(0) + 12, Y(R) - 6, 'y', { class: 'axlbl' }, ga);
   showLayers();
 }
 function showLayers() {
@@ -289,7 +276,6 @@ function drawCartHelp(p, color, values, g) {
 }
 
 function drawPolarHelp(p, color, values, g) {
-  el('circle', { cx: C, cy: C, r: p.r * U, fill: 'none', stroke: color, 'stroke-width': 3, 'stroke-dasharray': '8 6' }, g);
   const [mx, my] = P(p.r, p.th);
   el('line', { x1: C, y1: C, x2: mx, y2: my, stroke: color, 'stroke-width': 3.5 }, g);
   if (p.th > 0.05) {
@@ -326,9 +312,9 @@ function render(v) {
   }
   const finished = v.solved || v.revealed;
   const color = v.solved ? 'var(--ok)' : 'var(--proj)';
-  if (v.compare || (finished && sys === 'cart')) drawCartHelp(pt, v.compare ? 'var(--proj)' : color, true, g);
+  if (finished && sys === 'cart') drawCartHelp(pt, color, true, g);
   else if (v.hint && sys === 'cart') drawCartHelp(pt, 'var(--proj)', false, g);
-  if (v.compare || (finished && sys === 'polar')) drawPolarHelp(pt, v.compare ? 'var(--accent)' : color, true, g);
+  if (finished && sys === 'polar') drawPolarHelp(pt, color, true, g);
   else if (v.hint && sys === 'polar') drawPolarHelp(pt, 'var(--proj)', false, g);
   drawPoint(pt, g);
 }
@@ -349,7 +335,6 @@ function clearInputs() { ['in1', 'in2'].forEach(id => { $(id).value = ''; $(id).
 function newPoint() {
   pt = generate();
   tries = 0; done = false;
-  score.tot++; updateScore();
   $('ptName').textContent = pt.name;
   clearInputs(); clearMsg();
   render({});
@@ -376,8 +361,6 @@ function check() {
 
   if (ok1 && ok2) {
     done = true;
-    score.ok++; if (tries === 1) score.first++;
-    updateScore();
     setMsg('ok', `🎉 ${tries === 1 ? 'Bravo, du premier coup !' : 'Bravo !'} <b>${ans(pt)}</b>`);
     render({ solved: true });
     return;
@@ -411,12 +394,6 @@ function reveal() {
   render({ revealed: true });
 }
 
-function updateScore() {
-  $('sOk').textContent = score.ok;
-  $('sFirst').textContent = score.first;
-  $('sTot').textContent = score.tot;
-}
-
 /* ---------- Changement de repère : le même point, deux écritures ---------- */
 function setSys(s) {
   if (s === sys) return;
@@ -431,11 +408,7 @@ function setSys(s) {
   $('minusKey').disabled = s === 'polar';
   drawGrids();
   clearInputs();
-  if (pt) {
-    done = true;
-    setMsg('info', `Même point :<br><b>${pt.name}(${fmt(pt.x)} ; ${fmt(pt.y)})</b> &nbsp;=&nbsp; <b>${pt.name}(${fmt(pt.r)} ; ${fmtA(pt.th)})</b>`);
-    render({ compare: true });
-  }
+  if (pt) newPoint();
 }
 
 function setLevel(l) {
@@ -483,7 +456,6 @@ $('newBtn').addEventListener('click', newPoint);
 $('checkBtn').addEventListener('click', check);
 $('revealBtn').addEventListener('click', reveal);
 $('fs').addEventListener('click', toggleFullscreen);
-$('resetBtn').addEventListener('click', () => { score.ok = score.first = score.tot = 0; updateScore(); });
 ['in1', 'in2'].forEach(id => {
   $(id).addEventListener('focus', () => setActive(id));
   $(id).addEventListener('click', () => setActive(id));
