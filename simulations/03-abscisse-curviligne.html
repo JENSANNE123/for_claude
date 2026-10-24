@@ -8,17 +8,17 @@
   :root{
     --bg:#f4f6fb; --card:#ffffff; --ink:#1d2433; --muted:#5b6475;
     --grid:#cfd6e3; --axis:#1d2433;
-    --accent:#2563eb; --ok:#15803d; --okbg:#dcfce7; --bad:#dc2626; --badbg:#fee2e2;
-    --info:#1e40af; --infobg:#dbeafe; --pt:#e11d48; --fil:#ea580c;
+    --accent:#2563eb; --ok:#15803d; --okbg:#dcfce7;
+    --info:#1e40af; --infobg:#dbeafe; --pt:#e11d48; --fil:#ea580c; --fil2:#fdba74;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{background:var(--bg);color:var(--ink);font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;font-size:19px}
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 16px}
   h1{font-size:1.35em;margin:0}
-  main{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:16px;padding:0 16px 16px;height:calc(100vh - 64px)}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px;padding:0 16px 16px;height:calc(100vh - 64px)}
   .board{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;min-height:0;padding:6px}
-  svg{width:100%;height:100%;display:block}
+  svg{width:100%;height:100%;display:block;touch-action:none;user-select:none;cursor:pointer}
   .panel{display:flex;flex-direction:column;gap:12px;overflow:auto;min-height:0}
   .card{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:14px 16px}
   .card h2{font-size:.85em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
@@ -26,109 +26,105 @@
   button:hover{filter:brightness(.96)}
   button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   .primary{background:var(--accent);color:#fff;font-weight:600}
-  .big{width:100%;font-size:1.15em;padding:14px}
   .row{display:flex;gap:8px;flex-wrap:wrap}
   .row > button{flex:1}
-  .levels button{flex:1;padding:8px 6px;font-size:.85em}
-  .levels button.active{background:var(--accent);color:#fff}
-  .lvl-desc{color:var(--muted);font-size:.8em;margin-top:8px}
-  .fil{background:#ffedd5;color:#9a3412;font-weight:600;width:100%;margin-top:8px}
-  .coords{display:flex;align-items:center;justify-content:center;gap:8px;font-size:1.7em;font-weight:600;margin:14px 0 12px}
-  .coords input{width:4em;font:inherit;text-align:center;padding:6px 4px;border:2px solid var(--accent);border-radius:10px;background:#fbfcfe;color:var(--ink);box-shadow:0 0 0 3px var(--infobg)}
-  .coords input.good{border-color:var(--ok);background:var(--okbg);box-shadow:none}
-  .coords input.wrong{border-color:var(--bad);background:var(--badbg);box-shadow:none}
-  .keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
-  .keypad button{font-size:1.45em;font-weight:600;padding:12px 0;background:#eef1f7;touch-action:manipulation;user-select:none}
-  .keypad button:active{background:#d6dcea;transform:scale(.97)}
-  .keypad .op{background:#e0e7ff;color:#3730a3}
-  .keypad .del{background:#fde2e2;color:#b91c1c;font-size:1.15em}
-  .keypad .zero{grid-column:span 4}
-  .msg{border-radius:12px;padding:10px 12px;font-size:1em;margin-top:10px;display:none;line-height:1.4}
-  .msg.ok{display:block;background:var(--okbg);color:var(--ok)}
-  .msg.bad{display:block;background:var(--badbg);color:var(--bad)}
-  .msg.info{display:block;background:var(--infobg);color:var(--info)}
+  .slider{display:flex;align-items:center;gap:12px;font-size:1.15em;font-weight:600}
+  .slider input{flex:1;accent-color:var(--accent);height:28px}
+  .live{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:baseline;font-size:1.3em}
+  .live .k{font-weight:700}
+  .live .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .live .ratio{color:var(--fil)}
+  .live .rad{color:var(--ok)}
+  .hide{display:none !important}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.95em}
+  th,td{padding:5px 4px;text-align:center;border-bottom:1px solid #e9edf4}
+  th{font-size:.8em;color:var(--muted)}
+  td.ratio{color:var(--fil);font-weight:700}
+  td.rad{color:var(--ok);font-weight:700}
+  .empty{color:var(--muted);text-align:center;font-size:.85em;padding:8px 0}
+  .formula{margin-top:12px;border-radius:12px;background:var(--okbg);color:var(--ok);text-align:center;padding:12px;font-size:1.35em;font-weight:700;line-height:1.5}
+  .dares button{font-weight:700}
+  .dares button.active{background:var(--fil);color:#fff}
+  .msg{border-radius:12px;padding:10px 12px;margin-top:10px;background:var(--okbg);color:var(--ok);font-weight:600;text-align:center}
   /* SVG */
-  .traj{stroke:#94a3b8;stroke-width:3;fill:none}
-  .axis{stroke:var(--axis);stroke-width:2}
-  .tick{stroke:#64748b;stroke-width:1.6}
-  .num{font-size:14px;fill:#64748b}
+  .traj{stroke:#cbd5e1;stroke-width:3;fill:none}
+  .axis{stroke:var(--axis);stroke-width:2;opacity:.3}
   .lbl{font-size:22px;font-weight:700}
-  .ptlbl{font-size:26px;font-weight:700;fill:var(--pt)}
-  .val{font-size:20px;font-weight:700}
-  .ruler{transition:opacity .5s}
-  .pop{transform-box:fill-box;transform-origin:center;animation:pop .45s ease-out}
-  @keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.5)}100%{transform:scale(1)}}
+  .chunk{font-size:20px;font-weight:800}
   @media (max-width:900px){
     main{grid-template-columns:1fr;height:auto}
-    .board{aspect-ratio:3/2}
+    .board{aspect-ratio:1/1}
   }
 </style>
 </head>
 <body>
 <header>
-  <h1>Abscisse curviligne s</h1>
+  <h1>Abscisse curviligne : quel lien entre s, R et θ ?</h1>
   <button id="fs" title="Plein écran (F)">⛶ Plein écran</button>
 </header>
 
 <main>
   <div class="board">
-    <svg id="svg" viewBox="0 0 920 580" aria-label="Cercle et règle">
+    <svg id="svg" viewBox="0 0 600 600" aria-label="Cercle">
       <defs>
         <marker id="arrTheta" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+          <path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/>
         </marker>
       </defs>
-      <g id="static"></g>
-      <g id="ruler" class="ruler"></g>
       <g id="dyn"></g>
     </svg>
   </div>
 
   <div class="panel">
     <div class="card">
-      <h2>Niveau</h2>
-      <div class="row levels" id="levels">
-        <button data-l="1" class="active">1</button>
-        <button data-l="2">2</button>
-        <button data-l="3">3</button>
-      </div>
-      <div class="lvl-desc" id="lvlDesc"></div>
+      <div class="slider"><span>R</span><input type="range" id="rSlider" min="1" max="4" step="0.5" value="3"><span id="rVal">3 cm</span></div>
     </div>
 
     <div class="card">
-      <button class="primary big" id="newBtn">✨ Nouveau point</button>
-      <div class="coords">
-        <span>s =</span>
-        <input id="inS" type="text" inputmode="none" autocomplete="off" aria-label="abscisse curviligne s">
-        <span>cm</span>
+      <div class="live">
+        <span class="k">θ</span><span class="v" id="vDeg"></span>
+        <span class="k">s</span><span class="v" id="vS"></span>
+        <span class="k ratio">s ÷ R</span><span class="v ratio" id="vRatio"></span>
+        <span class="k rad hide radCol">θ</span><span class="v rad hide radCol" id="vRad"></span>
       </div>
-      <div class="keypad" id="keypad">
-        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="back" class="del" title="Effacer le dernier chiffre">⌫</button>
-        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="clear" class="del" title="Effacer">C</button>
-        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="," class="op" title="Virgule">,</button>
-        <button data-k="0" class="zero">0</button>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="noteBtn">📏 Noter la mesure</button>
       </div>
-      <div class="row">
-        <button class="primary" id="checkBtn">✔ Vérifier</button>
-        <button id="revealBtn">👁 Révéler</button>
-      </div>
-      <button class="fil" id="unrollBtn">🧵 Dérouler le fil</button>
-      <div class="msg" id="msg"></div>
     </div>
+
+    <div class="card">
+      <h2>🎯 Défi : placez M pour que…</h2>
+      <div class="row dares" id="dares">
+        <button data-n="1">s = R</button>
+        <button data-n="2">s = 2R</button>
+        <button data-n="3">s = 3R</button>
+      </div>
+      <div class="msg hide" id="dareMsg"></div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead><tr><th>R (cm)</th><th>θ (°)</th><th>s (cm)</th><th>s ÷ R</th><th class="hide radCol">θ (rad)</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty">Déplacez M, puis notez la mesure.</div>
+      <div class="row" style="margin-top:10px">
+        <button id="radBtn">θ en radians ?</button>
+        <button id="clearBtn">🗑 Effacer</button>
+      </div>
+      <div class="formula hide" id="formula">s ÷ R = θ (en rad)<br>s = R · θ</div>
+    </div>
+
   </div>
 </main>
 
 <script>
 const NS = 'http://www.w3.org/2000/svg';
-const CX = 460, CY = 235, U = 40;              // U : pixels par centimètre
-const RX = 130, RY = 490, SMAX = 19;           // la règle du bas : de 0 à 19 cm (marge à gauche pour le fil qui roule)
-const DEG = Math.PI / 180;
+const C = 300, U = 62, DEG = Math.PI / 180;
 const $ = id => document.getElementById(id);
 
-const LEVELS = { 1: 'Lire s sur le cercle', 2: 'Rayon différent', 3: 'Calculer s = R·θ' };
-
-let level = 1, R = 3, pt = null, tries = 0, done = false;
-let unroll = 0, unrollTarget = 0, fresh = false;
+let R = 3, deg = 90, showRad = false, dare = 0;
+const rows = [];
 
 function el(tag, attrs, parent) {
   const e = document.createElementNS(NS, tag);
@@ -141,260 +137,129 @@ function txt(x, y, s, attrs, parent) {
   t.textContent = s;
   return t;
 }
-function withBg(t, parent) {
-  const b = t.getBBox();
-  parent.insertBefore(el('rect', { x: b.x - 5, y: b.y - 2, width: b.width + 10, height: b.height + 4, rx: 6, fill: '#fff', opacity: .92 }), t);
-}
-const fmt = (n, d = 2) => {
-  const r = Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
-  return (Number.isInteger(r) ? String(r) : r.toFixed(d).replace(/0+$/, '')).replace('.', ',');
-};
-// Point du cercle à l'abscisse curviligne sg (en cm), compté depuis M0 dans le sens ↺
-const onCircle = sg => [CX + R * U * Math.cos(sg / R), CY - R * U * Math.sin(sg / R)];
-const onRuler = sg => [RX + sg * U, RY];
-const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-// Le fil garde toujours sa longueur. 1) l'arc se pose sur la règle en M0 ;
-// 2) il s'aplatit comme une roue qui roule (sa courbure passe de 1/R à 0).
-function filPoint(sg) {
-  const e1 = ease(Math.min(1, unroll / 0.4)), e2 = ease(Math.max(0, (unroll - 0.4) / 0.6));
-  const k = (1 - e2) / R, h = (1 - e1) * Math.PI / 2;
-  const sx = CX + R * U + (RX - CX - R * U) * e1, sy = CY + (RY - CY) * e1;
-  if (k < 1e-6) return [sx + sg * U * Math.cos(h), sy - sg * U * Math.sin(h)];
-  return [sx + (U / k) * (Math.sin(h + k * sg) - Math.sin(h)), sy + (U / k) * (Math.cos(h + k * sg) - Math.cos(h))];
+const fmt = (n, d = 2) => n.toFixed(d).replace('.', ',');
+const fmtR = r => String(r).replace('.', ',');
+const P = (a, r) => [C + r * Math.cos(a), C - r * Math.sin(a)];   // a en radians, r en pixels
+function arc(a1, a2, r) {
+  const [x1, y1] = P(a1, r), [x2, y2] = P(a2, r);
+  return `M${x1},${y1} A${r},${r} 0 ${a2 - a1 > Math.PI ? 1 : 0} 0 ${x2},${y2}`;
 }
 
 /* ---------- Dessin ---------- */
-function drawStatic() {
-  const g = $('static');
-  g.innerHTML = '';
-  el('line', { x1: CX - R * U - 30, y1: CY, x2: CX + R * U + 50, y2: CY, class: 'axis', opacity: .35 }, g);
-  el('circle', { cx: CX, cy: CY, r: R * U, class: 'traj' }, g);
-  if (level < 3) {
-    const per = 2 * Math.PI * R;
-    for (let k = 0; k < per - 0.3; k++) {
-      const a = k / R, c = Math.cos(a), s = Math.sin(a), long = k % 5 === 0;
-      const r1 = R * U - (long ? 9 : 6), r2 = R * U + (long ? 9 : 6);
-      el('line', { x1: CX + r1 * c, y1: CY - r1 * s, x2: CX + r2 * c, y2: CY - r2 * s, class: 'tick', 'stroke-width': long ? 2.4 : 1.6 }, g);
-      if (k > 0) txt(CX + (R * U + 22) * c, CY - (R * U + 22) * s + 5, k, { class: 'num', 'text-anchor': 'middle', 'font-weight': long ? 700 : 400 }, g);
-    }
-  }
-  el('circle', { cx: CX, cy: CY, r: 4, fill: 'var(--axis)' }, g);
-  txt(CX - 10, CY + 24, 'O', { class: 'lbl', 'font-style': 'italic', 'text-anchor': 'end', fill: 'var(--axis)' }, g);
-  // Rayon R, sur l'axe entre O et M0
-  el('line', { x1: CX, y1: CY + 14, x2: CX + R * U, y2: CY + 14, stroke: 'var(--accent)', 'stroke-width': 2 }, g);
-  [CX, CX + R * U].forEach(x => el('line', { x1: x, y1: CY + 8, x2: x, y2: CY + 20, stroke: 'var(--accent)', 'stroke-width': 2 }, g));
-  txt(CX + R * U / 2, CY + 38, `R = ${fmt(R)} cm`, { class: 'val', fill: 'var(--accent)', 'text-anchor': 'middle', 'font-size': 17 }, g);
-}
-
-function drawRuler() {
-  const g = $('ruler');
-  g.innerHTML = '';
-  el('rect', { x: RX - 14, y: RY - 4, width: SMAX * U + 28, height: 46, rx: 6, fill: '#fef9c3', stroke: '#ca8a04', 'stroke-width': 1.5 }, g);
-  for (let k = 0; k <= SMAX; k++) {
-    const x = RX + k * U, long = k % 5 === 0;
-    el('line', { x1: x, y1: RY - 4, x2: x, y2: RY + (long ? 16 : 10), class: 'tick', 'stroke-width': long ? 2.4 : 1.6 }, g);
-    txt(x, RY + 34, k, { class: 'num', 'text-anchor': 'middle', 'font-weight': long ? 700 : 400 }, g);
-  }
-  g.style.opacity = unroll > 0.01 ? 1 : 0;
-}
-
-function drawDyn() {
+function draw() {
   const g = $('dyn');
   g.innerHTML = '';
-  $('ruler').style.opacity = unroll > 0.01 ? 1 : 0;
-  if (!pt) return;
-  const finished = done;
-  const color = finished ? 'var(--ok)' : 'var(--fil)';
+  const th = deg * DEG, rp = R * U;
 
-  // OM et l'angle θ (niveau 3)
-  const [mx, my] = onCircle(pt.s);
-  if (unroll < 0.01) {
-    el('line', { x1: CX, y1: CY, x2: mx, y2: my, stroke: '#94a3b8', 'stroke-width': 2 }, g);
-    if (level === 3) {
-      const ra = 34, a = pt.s / R;
-      const [ex, ey] = [CX + ra * Math.cos(a), CY - ra * Math.sin(a)];
-      el('path', { d: `M${CX + ra},${CY} A${ra},${ra} 0 ${a > Math.PI ? 1 : 0} 0 ${ex},${ey}`, stroke: 'var(--accent)', 'stroke-width': 3, fill: 'none', 'marker-end': 'url(#arrTheta)' }, g);
-      const lx = CX + (ra + 40) * Math.cos(a / 2), ly = CY - (ra + 40) * Math.sin(a / 2);
-      withBg(txt(lx, ly + 7, `θ = ${pt.deg}°`, { class: 'val', fill: 'var(--accent)', 'text-anchor': 'middle' }, g), g);
-    }
+  el('line', { x1: C - rp - 30, y1: C, x2: C + rp + 40, y2: C, class: 'axis' }, g);
+  el('circle', { cx: C, cy: C, r: rp, class: 'traj' }, g);
+
+  // L'arc M0M découpé en morceaux de longueur R (chaque morceau = 1 rad)
+  const n = Math.floor(th + 1e-9);
+  for (let i = 0; i < n; i++) {
+    el('path', { d: arc(i, i + 1, rp), stroke: i % 2 ? 'var(--fil2)' : 'var(--fil)', 'stroke-width': 9, fill: 'none' }, g);
+    const [x, y] = P(i + 0.5, rp + 26);
+    txt(x, y + 7, i + 1, { class: 'chunk', fill: 'var(--fil)', 'text-anchor': 'middle' }, g);
+  }
+  if (th - n > 1e-3)
+    el('path', { d: arc(n, th, rp), stroke: n % 2 ? 'var(--fil2)' : 'var(--fil)', 'stroke-width': 9, fill: 'none', opacity: .55 }, g);
+  // séparations entre les morceaux
+  for (let i = 1; i <= n; i++) {
+    const [x1, y1] = P(i, rp - 9), [x2, y2] = P(i, rp + 9);
+    el('line', { x1, y1, x2, y2, stroke: '#fff', 'stroke-width': 3 }, g);
   }
 
-  // Le fil : l'arc de M0 à M
-  let d = '';
-  const n = Math.max(2, Math.ceil(pt.s / 0.08));
-  for (let i = 0; i <= n; i++) {
-    const [x, y] = filPoint(pt.s * i / n);
-    d += (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
-  }
-  el('path', { d, stroke: color, 'stroke-width': 7, fill: 'none', 'stroke-linecap': 'round', opacity: .85 }, g);
+  // Le rayon R (même couleur que le premier morceau, pour comparer)
+  el('line', { x1: C, y1: C, x2: C + rp, y2: C, stroke: 'var(--fil)', 'stroke-width': 6, 'stroke-linecap': 'round' }, g);
+  txt(C + rp / 2, C + 30, 'R', { class: 'lbl', fill: 'var(--fil)', 'text-anchor': 'middle' }, g);
 
-  // M0, toujours au début du fil
-  const [ox, oy] = filPoint(0);
-  el('circle', { cx: ox, cy: oy, r: 8, fill: '#fff', stroke: 'var(--axis)', 'stroke-width': 3 }, g);
-  if (unroll < 0.01) txt(ox + 12, oy - 12, 'M₀', { class: 'lbl', fill: 'var(--axis)' }, g);
-  else txt(ox - 12, oy + 8, 'M₀', { class: 'lbl', fill: 'var(--axis)', 'text-anchor': 'end' }, g);
-
-  // M, au bout du fil
-  const [px, py] = filPoint(pt.s);
-  el('circle', Object.assign({ cx: px, cy: py, r: 10, fill: 'var(--pt)', stroke: '#fff', 'stroke-width': 2.5 }, fresh ? { class: 'pop' } : {}), g);
-  fresh = false;
-  if (unroll < 0.01) {
-    const a = pt.s / R, rm = level < 3 ? R * U - 30 : R * U + 26;   // au niveau 3, pas de graduations : M dehors
-    txt(CX + rm * Math.cos(a - 0.12), CY - rm * Math.sin(a - 0.12) + 9, 'M', { class: 'ptlbl', 'text-anchor': 'middle' }, g);
-  } else {
-    txt(px, py - 16, 'M', { class: 'ptlbl', 'text-anchor': 'middle' }, g);
+  // OM et l'angle θ
+  const [mx, my] = P(th, rp);
+  el('line', { x1: C, y1: C, x2: mx, y2: my, stroke: '#64748b', 'stroke-width': 2.5 }, g);
+  if (deg > 0) {
+    const ra = 30;
+    el('path', { d: arc(0, th, ra), stroke: 'var(--axis)', 'stroke-width': 2.5, fill: 'none', 'marker-end': 'url(#arrTheta)' }, g);
+    const [tx, ty] = P(th / 2, ra + 20);
+    txt(tx, ty + 8, 'θ', { class: 'lbl', fill: 'var(--axis)', 'text-anchor': 'middle' }, g);
   }
 
-  if (finished) {
-    if (unroll > 0.99) {
-      withBg(txt(RX + pt.s * U / 2, RY - 44, `s = ${fmt(pt.s)} cm`, { class: 'val', fill: 'var(--ok)', 'text-anchor': 'middle' }, g), g);
-    } else if (unroll < 0.01) {
-      const a = pt.s / (2 * R), rr = R * U + (level < 3 ? 52 : 40);
-      withBg(txt(CX + rr * Math.cos(a), CY - rr * Math.sin(a) + 7, `s = ${fmt(pt.s)} cm`, { class: 'val', fill: 'var(--ok)', 'text-anchor': 'middle' }, g), g);
-    }
+  el('circle', { cx: C, cy: C, r: 4, fill: 'var(--axis)' }, g);
+  txt(C - 10, C + 26, 'O', { class: 'lbl', 'font-style': 'italic', 'text-anchor': 'end', fill: 'var(--axis)' }, g);
+  el('circle', { cx: C + rp, cy: C, r: 8, fill: '#fff', stroke: 'var(--axis)', 'stroke-width': 3 }, g);
+  txt(C + rp + 12, C - 12, 'M₀', { class: 'lbl', fill: 'var(--axis)' }, g);
+  el('circle', { cx: mx, cy: my, r: 12, fill: 'var(--pt)', stroke: '#fff', 'stroke-width': 3 }, g);
+  const [lx, ly] = P(th + 0.16, rp - 32);
+  txt(lx, ly + 9, 'M', { class: 'lbl', 'font-size': 26, fill: 'var(--pt)', 'text-anchor': 'middle' }, g);
+
+  update();
+}
+
+function update() {
+  const th = deg * DEG, s = R * th;
+  $('vDeg').textContent = deg + '°';
+  $('vS').textContent = fmt(s) + ' cm';
+  $('vRatio').textContent = fmt(s / R);
+  $('vRad').textContent = fmt(th) + ' rad';
+  if (dare) {
+    const ok = Math.abs(th - dare) < 0.012;
+    $('dareMsg').classList.toggle('hide', !ok);
+    if (ok) $('dareMsg').textContent = `🎉 θ = ${deg}° = ${dare} rad`;
   }
 }
 
-/* ---------- Animation du fil ---------- */
-let last = performance.now();
-function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
-  last = now;
-  if (unroll !== unrollTarget) {
-    const step = dt / 1.4;
-    unroll = unrollTarget > unroll ? Math.min(unrollTarget, unroll + step) : Math.max(unrollTarget, unroll - step);
-    drawDyn();
-  }
-  requestAnimationFrame(loop);
-}
-function setUnroll(on) {
-  unrollTarget = on ? 1 : 0;
-  $('unrollBtn').textContent = on ? '🧵 Enrouler le fil' : '🧵 Dérouler le fil';
+function renderTable() {
+  $('tbody').innerHTML = rows.map(r => `<tr><td>${fmtR(r.R)}</td><td>${r.deg}</td><td>${fmt(r.s)}</td>` +
+    `<td class="ratio">${fmt(r.s / r.R)}</td><td class="rad${showRad ? '' : ' hide'} radCol">${fmt(r.deg * DEG)}</td></tr>`).join('');
+  $('empty').classList.toggle('hide', rows.length > 0);
 }
 
-/* ---------- Questions ---------- */
-function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
-function generate() {
-  let p;
-  do {
-    if (level === 1) { R = 3; p = { s: randInt(1, 18) }; }
-    else if (level === 2) {
-      R = [2, 2.5, 3][randInt(0, 2)];
-      p = { s: randInt(1, Math.min(SMAX, Math.floor(2 * Math.PI * R) - 1)) };
-    } else {
-      R = [2, 2.5, 3][randInt(0, 2)];
-      const deg = randInt(2, 11) * 30;
-      p = { deg, s: R * deg * DEG };
-    }
-  } while (p.s > SMAX || (pt && Math.abs(pt.s - p.s) < 1e-9));
-  return p;
+/* ---------- Interactions ---------- */
+const svg = $('svg');
+let dragging = false;
+function pointerDeg(e) {
+  const p = svg.createSVGPoint();
+  p.x = e.clientX; p.y = e.clientY;
+  const q = p.matrixTransform(svg.getScreenCTM().inverse());
+  const a = Math.atan2(C - q.y, q.x - C) / DEG;
+  return Math.round((a + 360) % 360) % 360;
 }
+svg.addEventListener('pointerdown', e => { dragging = true; svg.setPointerCapture(e.pointerId); deg = pointerDeg(e); draw(); });
+svg.addEventListener('pointermove', e => { if (dragging) { deg = pointerDeg(e); draw(); } });
+svg.addEventListener('pointerup', () => { dragging = false; });
+svg.addEventListener('pointercancel', () => { dragging = false; });
 
-function setMsg(kind, html) { const m = $('msg'); m.className = 'msg ' + kind; m.innerHTML = html; }
-function clearMsg() { $('msg').className = 'msg'; }
-
-function newPoint() {
-  pt = generate();
-  tries = 0; done = false;
-  $('inS').value = ''; $('inS').className = '';
-  unroll = 0; setUnroll(false);
-  clearMsg();
-  fresh = true;
-  drawStatic(); drawDyn();
-}
-
-function piText(deg) {
-  const g = (a, b) => b ? g(b, a % b) : a, k = g(deg, 180), n = deg / k, m = 180 / k;
-  return (n === 1 ? '' : n) + 'π' + (m === 1 ? '' : '/' + m);
-}
-function successText() {
-  if (level < 3) return `s = ${fmt(pt.s)} cm`;
-  return `s = R·θ = ${fmt(R)} × ${piText(pt.deg)} ≈ ${fmt(pt.s)} cm`;
-}
-
-function check() {
-  if (!pt) { newPoint(); return; }
-  if (done) return;
-  const raw = $('inS').value.trim().replace(',', '.');
-  if (raw === '' || isNaN(Number(raw))) { setMsg('info', 'Écrivez s.'); return; }
-  const a = Number(raw);
-  tries++;
-  const tol = level < 3 ? 0.05 : 0.06;
-  if (Math.abs(a - pt.s) < tol) {
-    done = true;
-    $('inS').className = 'good';
-    setMsg('ok', `🎉 ${tries === 1 ? 'Bravo, du premier coup !' : 'Bravo !'} <b>${successText()}</b>`);
-    drawDyn();
-    return;
-  }
-  $('inS').className = 'wrong';
-  let advice = '✘ Ce n\'est pas la bonne longueur.';
-  if (Math.abs(a - (2 * Math.PI * R - pt.s)) < tol + 0.5) advice = '↺ On part de M₀ dans l\'autre sens.';
-  else if (level === 3 && Math.abs(a - R * pt.deg) < 0.5) advice = '✘ Dans s = R·θ, θ est en <b>radians</b>.';
-  if (tries >= 2) advice += '<br>💡 Déroulez le fil !';
-  setMsg('bad', advice);
-}
-
-function reveal() {
-  if (!pt || done) return;
-  done = true;
-  $('inS').value = fmt(pt.s);
-  setMsg('info', `<b>${successText()}</b>`);
-  drawDyn();
-}
-
-function setLevel(l) {
-  level = l;
-  document.querySelectorAll('#levels button').forEach(b => b.classList.toggle('active', +b.dataset.l === l));
-  $('lvlDesc').textContent = LEVELS[l];
-  newPoint();
-}
-
-/* ---------- Clavier à l'écran ---------- */
-function pressKey(k) {
-  if (done) return;
-  const inp = $('inS');
-  let v = inp.value.replace('.', ',');
-  if (k === 'back') v = v.slice(0, -1);
-  else if (k === 'clear') v = '';
-  else if (k === ',') { if (!v.includes(',')) v = (v === '' ? '0' : v) + ','; }
-  else if (v.replace(',', '').length < 5) v = (v === '0' ? '' : v) + k;
-  inp.value = v;
-  inp.className = '';
-}
-
-function toggleFullscreen() {
+$('rSlider').addEventListener('input', e => { R = +e.target.value; $('rVal').textContent = fmtR(R) + ' cm'; draw(); });
+$('noteBtn').addEventListener('click', () => {
+  rows.push({ R, deg, s: R * deg * DEG });
+  if (rows.length > 10) rows.shift();
+  renderTable();
+});
+$('clearBtn').addEventListener('click', () => { rows.length = 0; renderTable(); });
+$('radBtn').addEventListener('click', () => {
+  showRad = !showRad;
+  document.querySelectorAll('.radCol').forEach(e => e.classList.toggle('hide', !showRad));
+  $('formula').classList.toggle('hide', !showRad);
+  $('radBtn').textContent = showRad ? 'Masquer θ (rad)' : 'θ en radians ?';
+});
+document.querySelectorAll('#dares button').forEach(b => b.addEventListener('click', () => {
+  dare = dare === +b.dataset.n ? 0 : +b.dataset.n;
+  document.querySelectorAll('#dares button').forEach(x => x.classList.toggle('active', +x.dataset.n === dare));
+  $('dareMsg').classList.add('hide');
+  update();
+}));
+$('fs').addEventListener('click', () => {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen().catch(() => {});
-}
-
-document.querySelectorAll('#levels button').forEach(b => b.addEventListener('click', () => setLevel(+b.dataset.l)));
-document.querySelectorAll('#keypad button').forEach(b => {
-  b.addEventListener('pointerdown', e => e.preventDefault());
-  b.addEventListener('click', () => pressKey(b.dataset.k));
-});
-$('newBtn').addEventListener('click', newPoint);
-$('checkBtn').addEventListener('click', check);
-$('revealBtn').addEventListener('click', reveal);
-$('unrollBtn').addEventListener('click', () => setUnroll(unrollTarget === 0));
-$('fs').addEventListener('click', toggleFullscreen);
-$('inS').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); if (done) newPoint(); else check(); }
 });
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
-  const k = e.key.toLowerCase();
-  if (e.target.tagName === 'BUTTON' && (k === 'enter' || k === ' ')) return;
-  if (k === 'n') newPoint();
-  else if (k === 'r') reveal();
-  else if (k === 'd') setUnroll(unrollTarget === 0);
-  else if (k === 'f') toggleFullscreen();
-  else if (k === 'enter') { done || !pt ? newPoint() : check(); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); deg = (deg + 1) % 360; draw(); }
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); deg = (deg + 359) % 360; draw(); }
+  else if (e.key.toLowerCase() === 'f') $('fs').click();
 });
 
-drawRuler();
-setLevel(1);
-requestAnimationFrame(loop);
+draw();
+renderTable();
 </script>
 </body>
 </html>
