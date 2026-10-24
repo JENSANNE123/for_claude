@@ -266,7 +266,11 @@ const scene1 = {
   ],
   tools: [],
   initState() { return { simTime: 0, playing: false }; },
-  tick(s, dt) { s.simTime += dt; },
+  tick(s, dt) {
+    s.simTime += dt;
+    const finishTime = Math.max(...this.racers.map(r => r.t));
+    if (s.simTime >= finishTime) s.playing = false;
+  },
   distOf(r, t) { const v = r.d / r.t; return Math.min(r.d, v * t); },
   buildPanel(container, state) {
     state.refs = { reveals: buildReveals(container, this.reveals) };
@@ -306,8 +310,8 @@ const scene1 = {
 };
 
 /* ================= SCÈNE 2 — Trajectoire courbe ================= */
-const PATH_D = 'M 70 440 C 230 440 230 130 450 130 C 670 130 670 440 830 440';
-const V2 = 1.8, PXPM2 = 55, LANE2_Y = 600, RULER2_PX = 680;
+const PATH_D = 'M 100 420 C 220 420 220 200 380 200 C 540 200 540 420 660 420';
+const V2 = 1.8, PXPM2 = 50, LANE2_Y = 600;
 const scene2 = {
   title: 'Scène 2 — Un objet suit une trajectoire courbe',
   quote: 'Et si la trajectoire était un cercle ? Comment mesurer la distance parcourue par un point qui tourne autour d\'un centre ?',
@@ -342,13 +346,13 @@ const scene2 = {
     const basePath = el('path', { d: PATH_D, fill: 'none', stroke: 'none' }, g);
     const totalLenPx = basePath.getTotalLength();
     s.totalLenPx = totalLenPx; s.totalLenM = totalLenPx / PXPM2;
-    s.sA = s.totalLenM / 3; s.sB = 2 * s.totalLenM / 3;
+    s.sA = 0; s.sB = s.totalLenM;   // A = début de la piste, B = fin de la piste
     const traveledM = Math.min(s.totalLenM, V2 * s.simTime);
 
     const curveFn = sM => { const p = basePath.getPointAtLength(Math.min(totalLenPx, sM * PXPM2)); return [p.x, p.y]; };
     const showLane = s.filOn || (s.unroll || 0) > 0.01;
-    const rulerPxPerM = RULER2_PX / s.totalLenM;   // échelle propre à la règle, indépendante de PXPM2
-    const pos = drawUnrollLane(g, { curveFn, totalM: s.totalLenM, unrollT: s.unroll, rulerX0: 90, rulerY: LANE2_Y, pxPerM: rulerPxPerM, color: '#ea580c', draw: showLane, step: 0.25, labelDy: -42 });
+    // même échelle que la courbe : la ficelle gardera exactement sa longueur une fois tendue
+    const pos = drawUnrollLane(g, { curveFn, totalM: s.totalLenM, unrollT: s.unroll, rulerX0: 90, rulerY: LANE2_Y, pxPerM: PXPM2, color: '#ea580c', draw: showLane, step: 0.25, labelDy: -42 });
 
     if (!showLane) {
       const progress = el('path', { d: PATH_D, fill: 'none', stroke: '#dc2626', 'stroke-width': 7, 'stroke-linecap': 'round' }, g);
@@ -610,60 +614,83 @@ const scene6 = {
       return `<p><b>Tous les points du disque parcourent le même angle pendant la même durée</b> — donc la même vitesse angulaire ω. Mais les points situés plus loin du centre parcourent une plus grande longueur d'arc dans ce même temps : leur vitesse linéaire v = R·ω est donc plus grande.</p>`;
     } }
   ],
-  tools: [],
-  initState() { return { thetaDeg: 150, R: 0.6, playing: false, simTime: 0, refs: null }; },
-  tick(s, dt) { s.simTime += dt; if (s.playing) { s.thetaDeg = (s.thetaDeg + OMEGA * dt * 180 / Math.PI) % 360; if (s.refs) s.refs.thetaSlider.value = s.thetaDeg; } },
+  // Mêmes outils, dans le même ordre, que les scènes précédentes : Démarrer/Pause est déjà
+  // connu ; on ajoute seulement « essayer avec un point M » comme étape supplémentaire,
+  // révélée à la demande plutôt que montrée d'emblée.
+  tools: [
+    { id: 'trace', label: '🔴 Tracer les trajectoires', onClick(s) { s.traceOn = !s.traceOn; } },
+    { id: 'effacer', label: '🗑 Effacer les trajectoires', onClick(s) { s.traceReset = s.rawTheta || 0; } },
+    { id: 'mesurer', label: '📐 Mesurer (s de chaque point)', onClick(s) { s.mesurerOn = !s.mesurerOn; } },
+    { id: 'showM', label: '🔧 Essayer avec un point M', onClick(s) { s.showM = !s.showM; } }
+  ],
+  initState() { return { simTime: 0, playing: false, rawTheta: 0, traceOn: true, traceReset: 0, mesurerOn: false, showM: false, R: 0.5, refs: null }; },
+  tick(s, dt) { s.simTime += dt; s.rawTheta = OMEGA * s.simTime; },
   buildPanel(container, state) {
-    const card = el2('div', { class: 'card' }, container);
-    const h = el2('h2', {}, card); h.textContent = 'Réglages';
-    const l1 = el2('div', { class: 'sliderLine' }, card);
-    el2('span', {}, l1).textContent = 'θ (commun à tous les points)';
-    const thetaSlider = el2('input', { type: 'range', min: '0', max: '360', step: '1', value: state.thetaDeg }, l1);
-    const thetaVal = el2('span', { class: 'val' }, l1);
-    thetaSlider.addEventListener('input', e => { state.thetaDeg = +e.target.value; state.playing = false; syncPlayLabel(); });
-    const l2 = el2('div', { class: 'sliderLine' }, card);
-    el2('span', {}, l2).textContent = 'R (point M, rouge)';
-    const rSlider = el2('input', { type: 'range', min: '0.2', max: '1', step: '0.05', value: state.R }, l2);
-    const rVal = el2('span', { class: 'val' }, l2);
+    state.refs = {
+      toolBtns: buildTools(container, this.tools, state),
+      mCard: el2('div', { class: 'card hide' }, container),
+      liveTable: el2('div', { class: 'card hide' }, container),
+      reveals: buildReveals(container, this.reveals)
+    };
+    const h = el2('h2', {}, state.refs.mCard); h.textContent = 'Point M réglable';
+    const l1 = el2('div', { class: 'sliderLine' }, state.refs.mCard);
+    el2('span', {}, l1).textContent = 'R (distance de M au centre)';
+    const rSlider = el2('input', { type: 'range', min: '0.2', max: '1', step: '0.05', value: state.R }, l1);
+    const rVal = el2('span', { class: 'val' }, l1);
     rSlider.addEventListener('input', e => { state.R = +e.target.value; });
-    state.refs = { liveTable: el2('div', { class: 'card' }, container), reveals: buildReveals(container, this.reveals), thetaSlider, thetaVal, rSlider, rVal };
+    state.refs.rSlider = rSlider; state.refs.rVal = rVal;
   },
   renderBoard(s, g) {
     g.innerHTML = '';
     drawDiskBase(g, { noArrow: true });
     const refR = R_DISK * DPXPM + 22;
     el('line', { x1: CX, y1: CY, x2: CX + refR, y2: CY, stroke: '#94a3b8', 'stroke-width': 2, 'stroke-dasharray': '7 5' }, g);
-    const th = s.thetaDeg * Math.PI / 180;
+    txt(CX + refR + 10, CY + 5, 'origine (θ=0)', { class: 'small', fill: '#64748b' }, g);
+    const th = s.rawTheta;
 
     el('line', { x1: CX, y1: CY, x2: CX + R_DISK * DPXPM * Math.cos(th), y2: CY - R_DISK * DPXPM * Math.sin(th), stroke: '#94a3b8', 'stroke-width': 2 }, g);
     PTS4.forEach(p => {
       const rp = p.r * DPXPM;
-      if (th > 0.02) el('path', { d: arcPath(0, th, rp), stroke: COL[p.id], 'stroke-width': 4, fill: 'none', opacity: .55 }, g);
+      if (s.traceOn) drawTrace(g, COL[p.id], rp, s.traceReset, th);
       const [x, y] = P(th, rp);
-      el('circle', { cx: x, cy: y, r: 11, fill: COL[p.id], stroke: '#fff', 'stroke-width': 3 }, g);
-      txt(x, y + 5, p.id, { 'font-size': 12, 'font-weight': 800, fill: '#fff', 'text-anchor': 'middle' }, g);
+      el('circle', { cx: x, cy: y, r: 12, fill: COL[p.id], stroke: '#fff', 'stroke-width': 3 }, g);
+      txt(x, y + 5, p.id, { 'font-size': 13, 'font-weight': 800, fill: '#fff', 'text-anchor': 'middle' }, g);
     });
-    // point M réglable (exercice R, θ) : couleur distincte de C pour rester lisible si R ≈ 1
-    const rpM = s.R * DPXPM, colM = '#7c3aed';
-    if (th > 0.02) el('path', { d: arcPath(0, th, rpM), stroke: colM, 'stroke-width': 7, fill: 'none', 'stroke-linecap': 'round' }, g);
-    const [mx, my] = P(th, rpM);
-    el('circle', { cx: mx, cy: my, r: 13, fill: colM, stroke: '#fff', 'stroke-width': 3 }, g);
-    txt(mx, my - 20, 'M', { class: 'lbl', 'font-size': 20, fill: colM, 'text-anchor': 'middle' }, g);
-
-    withBg(txt(CX, 60, 'θ = ' + fmtDeg(th) + ' = ' + fmtRad(th) + ' rad (le même pour tous les points)', { class: 'lbl', 'font-size': 17, 'text-anchor': 'middle' }, g), g, 8);
+    if (s.showM) {
+      const rpM = s.R * DPXPM, colM = '#7c3aed';
+      if (s.traceOn) drawTrace(g, colM, rpM, s.traceReset, th);
+      const [mx, my] = P(th, rpM);
+      el('circle', { cx: mx, cy: my, r: 13, fill: colM, stroke: '#fff', 'stroke-width': 3 }, g);
+      txt(mx, my - 20, 'M', { class: 'lbl', 'font-size': 20, fill: colM, 'text-anchor': 'middle' }, g);
+    }
+    // la valeur de l'angle est toujours notée, comme en scène 5
+    const aStr = angleUnit === 'deg' ? fmtDeg(th) : fmtRad(th) + ' rad';
+    const ra = 55;
+    if (th > 0.02) {
+      el('path', { d: arcPath(0, th % (2 * Math.PI) === 0 && th > 0 ? 2 * Math.PI - 0.001 : th, ra), stroke: '#7c3aed', 'stroke-width': 3, fill: 'none', 'marker-end': 'url(#arrTheta)' }, g);
+      const [tx, ty] = P((th % (2 * Math.PI)) / 2, ra + 26);
+      withBg(txt(tx, ty + 8, 'θ = ' + aStr, { class: 'lbl', fill: '#7c3aed', 'text-anchor': 'middle' }, g), g);
+    }
   },
   renderLive(s) {
-    s.refs.thetaVal.textContent = angleUnit === 'deg' ? Math.round(s.thetaDeg) + '°' : fmtRad(s.thetaDeg * Math.PI / 180) + ' rad';
-    s.refs.rVal.textContent = fmt(s.R, 2) + ' m';
-    const th = s.thetaDeg * Math.PI / 180;
-    const rows = PTS4.map(p => `<tr><td style="color:${COL[p.id]};font-weight:700">${p.id}</td><td>${fmt(p.r, 2)}</td><td><b>${fmt(p.r * th, 3)}</b></td></tr>`).join('');
-    s.refs.liveTable.innerHTML = `<h2>Même θ, s différent</h2>
-      <table class="mini"><tr><th>Point</th><th>r (m)</th><th>s = r×θ (m)</th></tr>${rows}
-      <tr><td style="color:#7c3aed;font-weight:700">M</td><td>${fmt(s.R, 2)}</td><td><b>${fmt(s.R * th, 3)}</b></td></tr></table>
-      <p style="margin-top:8px">Même θ pour tous ⇒ <b>même ω = Δθ/Δt</b>. Mais s = r×θ diffère ⇒ <b>v = r×ω diffère</b>.</p>`;
+    Object.entries(s.refs.toolBtns).forEach(([id, b]) => {
+      if (id === 'trace') b.classList.toggle('active', s.traceOn);
+      if (id === 'mesurer') b.classList.toggle('active', s.mesurerOn);
+      if (id === 'showM') b.classList.toggle('active', s.showM);
+    });
+    s.refs.mCard.classList.toggle('hide', !s.showM);
+    s.refs.liveTable.classList.toggle('hide', !s.mesurerOn);
+    if (s.mesurerOn) {
+      const th = s.rawTheta;
+      const rows = PTS4.map(p => `<tr><td style="color:${COL[p.id]};font-weight:700">${p.id}</td><td>${fmt(p.r, 2)}</td><td><b>${fmt(p.r * th, 3)}</b></td></tr>`).join('');
+      const mRow = s.showM ? `<tr><td style="color:#7c3aed;font-weight:700">M</td><td>${fmt(s.R, 2)}</td><td><b>${fmt(s.R * th, 3)}</b></td></tr>` : '';
+      s.refs.liveTable.innerHTML = `<h2>Même θ, s différent</h2>
+        <table class="mini"><tr><th>Point</th><th>r (m)</th><th>s = r×θ (m)</th></tr>${rows}${mRow}</table>
+        <p style="margin-top:8px">Même θ pour tous ⇒ <b>même ω = Δθ/Δt</b>. Mais s = r×θ diffère ⇒ <b>v = r×ω diffère</b>.</p>`;
+    }
     this.reveals.forEach(d => { const ref = s.refs.reveals[d.id]; if (ref.content.classList.contains('open')) ref.content.innerHTML = d.html(s); });
   },
-  onReset(s) { s.refs.thetaSlider.value = 150; s.refs.rSlider.value = 0.6; }
+  onReset(s) { s.traceReset = 0; s.refs.rSlider.value = 0.5; }
 };
 
 /* ================= Shell : navigation, transport, boucle ================= */
