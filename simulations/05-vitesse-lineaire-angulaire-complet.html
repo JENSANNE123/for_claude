@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vitesse linéaire et vitesse angulaire</title>
+<style>
+  :root{
+    --bg:#f1f4fa; --card:#ffffff; --ink:#1d2433; --muted:#5b6475;
+    --grid:#cfd6e3; --accent:#2563eb; --accent2:#7c3aed;
+    --ok:#15803d; --okbg:#dcfce7; --bad:#dc2626; --badbg:#fee2e2;
+    --info:#1e40af; --infobg:#dbeafe; --warn:#9a3412; --warnbg:#ffedd5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;font-size:18px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:10px 18px 4px}
+  h1{font-size:1.25em;margin:0}
+  .sceneTitle{font-size:.95em;color:var(--muted);margin-top:2px}
+  .progress{display:flex;gap:6px;padding:0 18px 10px}
+  .progress .seg{flex:1;height:7px;border-radius:4px;background:#dde3ee;cursor:pointer}
+  .progress .seg.done{background:#93c5fd}
+  .progress .seg.active{background:var(--accent)}
+
+  main{display:grid;grid-template-columns:minmax(0,1.5fr) 440px;gap:16px;padding:0 18px;height:calc(100vh - 150px)}
+  .board{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;min-height:0;padding:6px}
+  svg{width:100%;height:100%;display:block}
+  .panelCol{display:flex;flex-direction:column;gap:12px;overflow:auto;min-height:0}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:14px 16px}
+  .card h2{font-size:.82em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
+  button{font:inherit;border:0;border-radius:12px;padding:9px 12px;cursor:pointer;background:#e7ebf3;color:var(--ink)}
+  button:hover{filter:brightness(.96)}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  button:disabled{opacity:.4;cursor:default}
+  .primary{background:var(--accent);color:#fff;font-weight:600}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row > button{flex:1}
+  .speedRow button{padding:7px 10px;font-size:.85em}
+  .speedRow button.active{background:var(--accent);color:#fff}
+  .chrono{font-variant-numeric:tabular-nums;font-weight:700;font-size:1.15em;text-align:center;background:var(--infobg);color:var(--info);border-radius:10px;padding:8px;margin-top:10px}
+  .toolsRow button{font-size:.92em}
+  .toolsRow button.active{background:var(--warn);color:#fff}
+  ul.q{margin:0;padding-left:1.25em;line-height:1.55}
+  ul.q li{margin-bottom:4px}
+  .reveal{margin-top:8px}
+  .reveal button{width:100%;text-align:left;background:#eef1f7;font-weight:600}
+  .reveal button.open{background:var(--accent);color:#fff}
+  .reveal .content{display:none;padding:10px 4px 2px;line-height:1.5}
+  .reveal .content.open{display:block}
+  .formula{background:var(--okbg);color:var(--ok);border-radius:10px;padding:10px;text-align:center;font-weight:700;font-size:1.15em;margin:6px 0}
+  table.mini{width:100%;border-collapse:collapse;font-size:.95em;margin-top:4px}
+  table.mini td,table.mini th{padding:4px 6px;text-align:center;border-bottom:1px solid #e9edf4}
+  table.mini th{color:var(--muted);font-size:.82em}
+  .liverow{display:flex;align-items:center;gap:8px;padding:3px 0;font-variant-numeric:tabular-nums}
+  .dot{width:14px;height:14px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+  footer{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px 16px}
+  footer .quote{flex:1;text-align:center;color:var(--muted);font-style:italic;font-size:.92em}
+  .sliderLine{display:flex;align-items:center;gap:10px;font-weight:600;margin:8px 0}
+  .sliderLine input[type=range]{flex:1;accent-color:var(--accent);height:26px}
+  .sliderLine .val{min-width:5.6em;text-align:right;font-variant-numeric:tabular-nums}
+  .unitTabs button{flex:1;padding:6px 8px;font-size:.85em}
+  .unitTabs button.active{background:var(--accent);color:#fff}
+  .hide{display:none !important}
+  .lbl{font-size:20px;font-weight:700}
+  .small{font-size:13px;fill:#94a3b8}
+  @media (max-width:980px){
+    main{grid-template-columns:1fr;height:auto}
+    .board{aspect-ratio:3/2}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Vitesse linéaire et vitesse angulaire</h1>
+    <div class="sceneTitle" id="sceneTitle"></div>
+  </div>
+  <button id="fs" title="Plein écran (F)">⛶ Plein écran</button>
+</header>
+<div class="progress" id="progress"></div>
+
+<main>
+  <div class="board">
+    <svg id="svg" viewBox="0 0 900 620" aria-label="Simulation">
+      <defs>
+        <marker id="arrAxis" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/></marker>
+        <marker id="arrOk" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+        <marker id="arrTheta" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker>
+      </defs>
+      <g id="board-g"></g>
+    </svg>
+  </div>
+
+  <div class="panelCol">
+    <div class="card">
+      <div class="row">
+        <button class="primary" id="playBtn">▶ Démarrer</button>
+        <button id="resetBtn">↺ Réinitialiser</button>
+      </div>
+      <div class="row speedRow" id="speedRow" style="margin-top:8px">
+        <button data-sp="0.5">0,5×</button>
+        <button data-sp="1" class="active">1×</button>
+        <button data-sp="2">2×</button>
+        <button data-sp="4">4×</button>
+      </div>
+      <div class="chrono" id="chrono">Δt = 0,0 s</div>
+    </div>
+    <div id="panels"></div>
+  </div>
+</main>
+
+<footer>
+  <button id="prevBtn">◀ Précédent</button>
+  <div class="quote" id="quote"></div>
+  <button id="nextBtn">Suivant ▶</button>
+</footer>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const $ = id => document.getElementById(id);
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(x, y, s, attrs, parent) {
+  const t = el('text', Object.assign({ x, y }, attrs), parent);
+  t.textContent = s;
+  return t;
+}
+function withBg(t, parent, pad = 4) {
+  const b = t.getBBox();
+  parent.insertBefore(el('rect', { x: b.x - pad, y: b.y - 2, width: b.width + pad * 2, height: b.height + 4, rx: 5, fill: '#fff', opacity: .92 }), t);
+}
+const fmt = (n, d = 2) => n.toFixed(d).replace('.', ',').replace('-', '−');
+function gcdI(a, b) { return b ? gcdI(b, a % b) : a; }
+function piFrac(t) {
+  const k = Math.round(t / (Math.PI / 12));
+  if (Math.abs(t - k * Math.PI / 12) > 1e-6) return null;
+  if (k === 0) return '0';
+  const g = gcdI(Math.abs(k), 12), num = k / g, den = 12 / g;
+  return (num < 0 ? '−' : '') + (Math.abs(num) === 1 ? '' : Math.abs(num)) + 'π' + (den === 1 ? '' : '/' + den);
+}
+function fmtRad(t, d = 2) { const f = piFrac(t); return f !== null ? f : fmt(t, d); }
+function fmtDeg(t) { return Math.round(t * 180 / Math.PI) + '°'; }
+
+/* ================= Disque partagé (scènes 3 à 6) ================= */
+const CX = 450, CY = 330, DPXPM = 190, R_DISK = 1.0, OMEGA = 1.0; // rad/s
+const P = (a, r, cx = CX, cy = CY) => [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+function arcPath(a1, a2, r, cx = CX, cy = CY) {
+  const [x1, y1] = P(a1, r, cx, cy), [x2, y2] = P(a2, r, cx, cy);
+  const big = Math.abs(a2 - a1) > Math.PI ? 1 : 0, sweep = a2 > a1 ? 0 : 1;
+  return `M${x1},${y1} A${r},${r} 0 ${big} ${sweep} ${x2},${y2}`;
+}
+function drawDiskBase(g, opts = {}) {
+  el('circle', { cx: CX, cy: CY, r: R_DISK * DPXPM, fill: '#eef1f7', stroke: '#cbd5e1', 'stroke-width': 2 }, g);
+  if (!opts.noArrow) {
+    const r = R_DISK * DPXPM + 26;
+    const [sx, sy] = P(70 * Math.PI / 180, r), [ex, ey] = P(95 * Math.PI / 180, r);
+    el('path', { d: `M${sx},${sy} A${r},${r} 0 0 0 ${ex},${ey}`, stroke: '#64748b', 'stroke-width': 3, fill: 'none', 'marker-end': 'url(#arrAxis)' }, g);
+  }
+  el('circle', { cx: CX, cy: CY, r: 5, fill: 'var(--ink)' }, g);
+  txt(CX - 12, CY + 24, 'O', { class: 'lbl', 'font-style': 'italic', 'text-anchor': 'end' }, g);
+}
+function drawTrace(g, color, radiusPx, fromTheta, toTheta) {
+  const span = toTheta - fromTheta;
+  if (span <= 1e-4) return;
+  if (span >= 2 * Math.PI - 1e-4) el('circle', { cx: CX, cy: CY, r: radiusPx, fill: 'none', stroke: color, 'stroke-width': 5 }, g);
+  else el('path', { d: arcPath(fromTheta, toTheta, radiusPx), stroke: color, 'stroke-width': 5, fill: 'none', 'stroke-linecap': 'round' }, g);
+}
+const COL = { A: '#2563eb', B: '#d97706', C: '#dc2626' };
+
+/* ================= Petits composants d'UI réutilisables ================= */
+function buildQuestions(container, questions) {
+  const h = el2('h2', {}, container); h.textContent = 'Questions pour la classe';
+  const ul = el2('ul', { class: 'q' }, container);
+  questions.forEach(q => { const li = el2('li', {}, ul); li.textContent = q; });
+}
+function el2(tag, attrs, parent) {
+  const e = document.createElement(tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+// Construit l'accordéon de révélations ; renvoie {contentDivs:{id:div}} pour mise à jour live
+function buildReveals(container, defs) {
+  const card = el2('div', { class: 'card' }, container);
+  const h = el2('h2', {}, card); h.textContent = 'Révélations progressives';
+  const refs = {};
+  defs.forEach(d => {
+    const wrap = el2('div', { class: 'reveal' }, card);
+    const btn = el2('button', {}, wrap); btn.textContent = '👁 ' + d.label;
+    const content = el2('div', { class: 'content' }, wrap);
+    btn.addEventListener('click', () => {
+      const open = content.classList.toggle('open');
+      btn.classList.toggle('open', open);
+    });
+    refs[d.id] = { content, def: d };
+  });
+  return refs;
+}
+function buildTools(container, defs, state) {
+  if (!defs.length) return {};
+  const card = el2('div', { class: 'card' }, container);
+  const h = el2('h2', {}, card); h.textContent = 'Outils';
+  const row = el2('div', { class: 'row toolsRow' }, card);
+  const refs = {};
+  defs.forEach(d => {
+    const b = el2('button', {}, row); b.textContent = d.label;
+    b.addEventListener('click', () => d.onClick(state));
+    refs[d.id] = b;
+  });
+  return refs;
+}
+
+/* ================= SCÈNE 1 — La course ================= */
+const TX0 = 110, TX1 = 830, LANE_Y = [150, 310, 470];
+const scene1 = {
+  title: 'Scène 1 — Trois objets font la course',
+  quote: 'Cette méthode fonctionne lorsque la trajectoire est rectiligne. Peut-on utiliser la même méthode lorsque la trajectoire est courbe ?',
+  racers: [
+    { id: 'A', label: 'Cycliste', emoji: '🚴', color: '#dc2626', d: 20, t: 5 },
+    { id: 'B', label: 'Véhicule', emoji: '🚗', color: '#2563eb', d: 20, t: 4 },
+    { id: 'C', label: 'Coureur', emoji: '🏃', color: '#15803d', d: 20, t: 2.5 }
+  ],
+  questions: [
+    'Quel objet arrive le premier ?',
+    'Les trois objets ont-ils parcouru la même distance ?',
+    'Comment comparer leurs vitesses ?',
+    'Comment calculer la vitesse de chaque objet à partir de la distance parcourue et de la durée du parcours ?'
+  ],
+  reveals: [
+    { id: 'f', label: 'Révéler la formule de la vitesse moyenne',
+      html() { return `<div class="formula">v = d / Δt</div><p>C'est la <b>vitesse moyenne</b> sur le parcours. Ici, elle est aussi <b>constante</b> : le mouvement est rectiligne uniforme.</p>`; } },
+    { id: 'c', label: 'Révéler les vitesses calculées',
+      html() { return scene1.racers.map(r => `<div>v<sub>${r.id}</sub> = ${r.d} / ${fmt(r.t, 1)} = <b>${fmt(r.d / r.t, 1)} m/s</b></div>`).join(''); } }
+  ],
+  tools: [],
+  initState() { return { simTime: 0, playing: false, revealed: new Set() }; },
+  tick(s, dt) { s.simTime += dt; },
+  distOf(r, t) { const v = r.d / r.t; return Math.min(r.d, v * t); },
+  buildPanel(container, state) {
+    buildQuestions(container.appendChild(el2('div', { class: 'card' })), this.questions);
+    state.refs = { reveals: buildReveals(container, this.reveals), live: el2('div', { class: 'card' }, container) };
+  },
+  renderBoard(s, g) {
+    g.innerHTML = '';
+    this.racers.forEach((r, i) => {
+      const y = LANE_Y[i];
+      el('rect', { x: TX0 - 30, y: y - 55, width: TX1 - TX0 + 90, height: 110, fill: i % 2 ? '#f8fafc' : '#ffffff' }, g);
+      el('line', { x1: TX0, y1: y, x2: TX1, y2: y, stroke: '#cbd5e1', 'stroke-width': 2 }, g);
+      el('line', { x1: TX0, y1: y - 42, x2: TX0, y2: y + 42, stroke: '#1d2433', 'stroke-width': 3 }, g);
+      el('line', { x1: TX1, y1: y - 42, x2: TX1, y2: y + 42, stroke: '#1d2433', 'stroke-width': 3 }, g);
+      const d = this.distOf(r, s.simTime), x = TX0 + (d / r.d) * (TX1 - TX0);
+      txt(TX0 - 40, y + 6, r.emoji, { 'font-size': 24, 'text-anchor': 'end' }, g);
+      el('circle', { cx: x, cy: y, r: 17, fill: r.color, stroke: '#fff', 'stroke-width': 3 }, g);
+      txt(x, y + 6, r.id, { 'font-size': 15, 'font-weight': 800, fill: '#fff', 'text-anchor': 'middle' }, g);
+      withBg(txt(x, y - 30, fmt(d, 1) + ' m', { class: 'lbl', fill: r.color, 'text-anchor': 'middle', 'font-size': 17 }, g), g);
+    });
+    const ry = 560;
+    for (let m = 0; m <= 20; m += 2) {
+      const x = TX0 + (m / 20) * (TX1 - TX0);
+      el('line', { x1: x, y1: ry, x2: x, y2: ry + 9, stroke: '#64748b', 'stroke-width': 1.6 }, g);
+      txt(x, ry + 26, m, { class: 'small', 'text-anchor': 'middle' }, g);
+    }
+    txt(TX1 + 22, ry + 26, 'm', { class: 'small' }, g);
+  },
+  renderLive(s) {
+    s.refs.live.innerHTML = `<h2>Pendant la course</h2>` + this.racers.map(r => {
+      const d = this.distOf(r, s.simTime), done = d >= r.d - 1e-6;
+      return `<div class="liverow"><span class="dot" style="background:${r.color}"></span><b>${r.id}</b> ${r.label} — ${fmt(d, 1)} / ${r.d} m${done ? ' <b style="color:var(--ok)">· arrivé(e)</b>' : ''}</div>`;
+    }).join('');
+    this.reveals.forEach(d => {
+      const ref = s.refs.reveals[d.id];
+      if (ref.content.classList.contains('open')) ref.content.innerHTML = d.html(s);
+    });
+  },
+  onReset() {}
+};
+
+/* ================= SCÈNE 2 — Trajectoire courbe ================= */
+const PATH_D = 'M 70 500 C 230 500 230 150 450 150 C 670 150 670 500 830 500';
+const V2 = 1.8, PXPM2 = 55;
+const scene2 = {
+  title: 'Scène 2 — Un objet suit une trajectoire courbe',
+  quote: 'Et si la trajectoire était un cercle ? Comment mesurer la distance parcourue par un point qui tourne autour d\'un centre ?',
+  questions: [
+    'L\'objet suit-il une trajectoire rectiligne ou curviligne ?',
+    'Peut-on calculer la distance parcourue en mesurant uniquement la distance entre le départ et l\'arrivée ?',
+    'Comment mesurer la longueur réelle de la trajectoire ?',
+    'Si on connaît cette longueur et la durée du parcours, peut-on encore calculer la vitesse ?'
+  ],
+  reveals: [
+    { id: 's', label: 'Révéler la longueur de la trajectoire s', html(s) { return `<div class="formula">s ≈ ${fmt(s.totalLenM, 1)} m</div>`; } },
+    { id: 't', label: 'Révéler la durée du parcours Δt', html(s) { return `<div class="formula">Δt = s / v ≈ ${fmt(s.totalLenM / V2, 1)} s</div>`; } },
+    { id: 'f', label: 'Révéler la formule de la vitesse moyenne', html(s) {
+      const t = s.totalLenM / V2;
+      return `<div class="formula">v<sub>moy</sub> = s / Δt = ${fmt(s.totalLenM, 1)} / ${fmt(t, 1)} ≈ ${fmt(s.totalLenM / t, 1)} m/s</div><p>Même méthode que pour la trajectoire rectiligne : on divise la distance <b>réellement parcourue</b> par la durée.</p>`;
+    } }
+  ],
+  tools: [
+    { id: 'fil', label: '🧵 Afficher le fil', onClick(s) { s.filOn = !s.filOn; } },
+    { id: 'mesure', label: '📏 Mesurer la trajectoire', onClick(s) { s.mesureOn = !s.mesureOn; } }
+  ],
+  initState() { return { simTime: 0, playing: false, filOn: false, mesureOn: false, totalLenM: 0, refs: null, revealed: new Set() }; },
+  tick(s, dt) { s.simTime += dt; if (s.simTime * V2 * PXPM2 >= s.totalLenPx && s.totalLenPx) s.playing = false; },
+  buildPanel(container, state) {
+    buildQuestions(container.appendChild(el2('div', { class: 'card' })), this.questions);
+    state.refs = { toolBtns: buildTools(container, this.tools, state), reveals: buildReveals(container, this.reveals), live: el2('div', { class: 'card' }, container) };
+  },
+  renderBoard(s, g) {
+    g.innerHTML = '';
+    const basePath = el('path', { d: PATH_D, fill: 'none', stroke: '#cbd5e1', 'stroke-width': 6 }, g);
+    const totalLenPx = basePath.getTotalLength();
+    s.totalLenPx = totalLenPx; s.totalLenM = totalLenPx / PXPM2;
+    const traveledPx = Math.min(totalLenPx, V2 * s.simTime * PXPM2);
+
+    if (s.filOn) {
+      el('path', { d: PATH_D, fill: 'none', stroke: '#f97316', 'stroke-width': 13, opacity: .3, 'stroke-linecap': 'round' }, g);
+      for (let m = 0; m <= s.totalLenM; m += 1) {
+        const pt = basePath.getPointAtLength(Math.min(totalLenPx, m * PXPM2));
+        el('circle', { cx: pt.x, cy: pt.y, r: 3.4, fill: '#9a3412' }, g);
+        if (Math.round(m) % 5 === 0) withBg(txt(pt.x, pt.y - 14, Math.round(m), { class: 'small', fill: '#9a3412', 'text-anchor': 'middle' }, g), g, 2);
+      }
+    }
+    const progress = el('path', { d: PATH_D, fill: 'none', stroke: '#dc2626', 'stroke-width': 7, 'stroke-linecap': 'round' }, g);
+    progress.setAttribute('stroke-dasharray', `${totalLenPx} ${totalLenPx}`);
+    progress.setAttribute('stroke-dashoffset', totalLenPx - traveledPx);
+
+    const pt = basePath.getPointAtLength(traveledPx);
+    el('circle', { cx: pt.x, cy: pt.y, r: 14, fill: '#1d2433', stroke: '#fff', 'stroke-width': 3 }, g);
+    txt(pt.x, pt.y + 5, '●', { fill: '#fff', 'text-anchor': 'middle', 'font-size': 10 }, g);
+
+    if (s.mesureOn) withBg(txt(450, 110, `s = ${fmt(s.totalLenM, 1)} m (longueur totale de la piste)`, { class: 'lbl', fill: '#1d2433', 'text-anchor': 'middle' }, g), g, 8);
+  },
+  renderLive(s) {
+    const d = Math.min(s.totalLenM, V2 * s.simTime), done = s.totalLenPx && V2 * s.simTime * PXPM2 >= s.totalLenPx - 1;
+    s.refs.live.innerHTML = `<h2>Pendant le parcours</h2><div class="liverow">Distance parcourue : <b>${fmt(d, 1)} m</b>${done ? ' <b style="color:var(--ok)">· arrivé</b>' : ''}</div>`;
+    Object.entries(s.refs.toolBtns).forEach(([id, b]) => b.classList.toggle('active', s[id === 'fil' ? 'filOn' : 'mesureOn']));
+    this.reveals.forEach(d2 => { const ref = s.refs.reveals[d2.id]; if (ref.content.classList.contains('open')) ref.content.innerHTML = d2.html(s); });
+  },
+  onReset() {}
+};
+
+/* ================= SCÈNE 3 — Rotation d'un point M ================= */
+const scene3 = {
+  title: 'Scène 3 — Un disque tourne : la trajectoire d\'un point',
+  quote: 'Si nous choisissons un point situé plus près du centre, parcourra-t-il la même distance pendant un tour ?',
+  questions: [
+    'Comment calculer la vitesse linéaire du point M ?',
+    'Quelle distance M parcourt-il en un tour complet ?',
+    'Combien de temps dure un tour complet ?'
+  ],
+  reveals: [
+    { id: 'L', label: 'Révéler la distance parcourue en un tour (L = 2πR)', html() { return `<div class="formula">L = 2πR = 2π × ${fmt(R_DISK, 1)} ≈ ${fmt(2 * Math.PI * R_DISK, 2)} m</div>`; } },
+    { id: 'T', label: 'Révéler la durée d\'un tour (T)', html() { return `<div class="formula">T = 2π / ω ≈ ${fmt(2 * Math.PI / OMEGA, 2)} s</div>`; } },
+    { id: 'v', label: 'Révéler la formule v = 2πR / T', html() {
+      const L = 2 * Math.PI * R_DISK, T = 2 * Math.PI / OMEGA;
+      return `<div class="formula">v = 2πR / T = ${fmt(L, 2)} / ${fmt(T, 2)} ≈ ${fmt(L / T, 2)} m/s</div><p>C'est la vitesse linéaire de M, <b>constante</b> ici.</p>`;
+    } }
+  ],
+  tools: [
+    { id: 'trace', label: '🔴 Tracer la trajectoire', onClick(s) { s.traceOn = !s.traceOn; } },
+    { id: 'effacer', label: '🗑 Effacer la trajectoire', onClick(s) { s.traceReset = s.rawTheta || 0; } }
+  ],
+  initState() { return { simTime: 0, playing: false, traceOn: true, traceReset: 0, rawTheta: 0, revealed: new Set() }; },
+  tick(s, dt) { s.simTime += dt; s.rawTheta = OMEGA * s.simTime; },
+  buildPanel(container, state) {
+    buildQuestions(container.appendChild(el2('div', { class: 'card' })), this.questions);
+    state.refs = { toolBtns: buildTools(container, this.tools, state), reveals: buildReveals(container, this.reveals), live: el2('div', { class: 'card' }, container) };
+  },
+  renderBoard(s, g) {
+    g.innerHTML = '';
+    drawDiskBase(g);
+    if (s.traceOn) drawTrace(g, '#dc2626', R_DISK * DPXPM, s.traceReset, s.rawTheta);
+    const th = s.rawTheta, [mx, my] = P(th, R_DISK * DPXPM);
+    el('line', { x1: CX, y1: CY, x2: mx, y2: my, stroke: '#64748b', 'stroke-width': 2.5 }, g);
+    el('circle', { cx: mx, cy: my, r: 13, fill: '#dc2626', stroke: '#fff', 'stroke-width': 3 }, g);
+    const [lx, ly] = P(th + 0.15, R_DISK * DPXPM - 34);
+    txt(lx, ly + 8, 'M', { class: 'lbl', 'font-size': 24, fill: '#dc2626', 'text-anchor': 'middle' }, g);
+    withBg(txt(CX, CY - R_DISK * DPXPM - 44, 'R = OM = ' + fmt(R_DISK, 1) + ' m', { class: 'lbl', 'font-size': 16, 'text-anchor': 'middle' }, g), g);
+  },
+  renderLive(s) {
+    const tours = Math.floor(s.rawTheta / (2 * Math.PI));
+    s.refs.live.innerHTML = `<h2>Mesures en direct</h2><div class="liverow">Nombre de tours : <b>${tours}</b></div>`;
+    Object.entries(s.refs.toolBtns).forEach(([id, b]) => { if (id === 'trace') b.classList.toggle('active', s.traceOn); });
+    this.reveals.forEach(d => { const ref = s.refs.reveals[d.id]; if (ref.content.classList.contains('open')) ref.content.innerHTML = d.html(s); });
+  },
+  onReset(s) { s.traceReset = 0; }
+};
+
+/* ================= SCÈNE 4 — Trois points, trois vitesses ================= */
+const PTS4 = [{ id: 'A', r: 0.35 }, { id: 'B', r: 0.65 }, { id: 'C', r: 1.0 }];
+const scene4 = {
+  title: 'Scène 4 — Plusieurs points sur le même rayon',
+  quote: 'Les trois points tournent ensemble. Ils parcourent des distances différentes : existe-t-il une grandeur commune aux trois ?',
+  questions: [
+    'Les trois points parcourent-ils la même distance pendant la même durée ?',
+    'Que remarquez-vous sur les vitesses de A, B et C ?',
+    'Quel point va le plus vite ? Lequel va le moins vite ?',
+    'Les trois points tournent ensemble : qu\'ont-ils en commun ?'
+  ],
+  reveals: [
+    { id: 'L', label: 'Révéler les distances parcourues en un tour', html() {
+      return `<table class="mini"><tr><th>Point</th><th>r (m)</th><th>L = 2πr (m)</th></tr>` +
+        PTS4.map(p => `<tr><td style="color:${COL[p.id]};font-weight:700">${p.id}</td><td>${fmt(p.r, 2)}</td><td><b>${fmt(2 * Math.PI * p.r, 2)}</b></td></tr>`).join('') +
+        `</table><p>Le point le plus éloigné du centre parcourt la plus grande distance.</p>`;
+    } },
+    { id: 'T', label: 'Révéler la durée d\'un tour (commune aux trois)', html() { return `<div class="formula">T = 2π / ω ≈ ${fmt(2 * Math.PI / OMEGA, 2)} s</div>`; } },
+    { id: 'v', label: 'Révéler les vitesses linéaires', html() {
+      const T = 2 * Math.PI / OMEGA;
+      return `<table class="mini"><tr><th>Point</th><th>v = 2πr/T (m/s)</th></tr>` +
+        PTS4.map(p => `<tr><td style="color:${COL[p.id]};font-weight:700">${p.id}</td><td><b>${fmt(2 * Math.PI * p.r / T, 2)}</b></td></tr>`).join('') +
+        `</table><p>Les vitesses linéaires sont <b>différentes</b>, bien que les trois points appartiennent au même disque.</p>`;
+    } }
+  ],
+  tools: [
+    { id: 'trace', label: '🔴 Tracer les trajectoires', onClick(s) { s.traceOn = !s.traceOn; } },
+    { id: 'effacer', label: '🗑 Effacer les trajectoires', onClick(s) { s.traceReset = s.rawTheta || 0; } }
+  ],
+  initState() { return { simTime: 0, playing: false, traceOn: true, traceReset: 0, rawTheta: 0, revealed: new Set() }; },
+  tick(s, dt) { s.simTime += dt; s.rawTheta = OMEGA * s.simTime; },
+  buildPanel(container, state) {
+    buildQuestions(container.appendChild(el2('div', { class: 'card' })), this.questions);
+    state.refs = { toolBtns: buildTools(container, this.tools, state), reveals: buildReveals(container, this.reveals), live: el2('div', { class: 'card' }, container) };
+  },
+  renderBoard(s, g) {
+    g.innerHTML = '';
+    drawDiskBase(g);
+    const th = s.rawTheta;
+    const vReveal = s.refs.reveals.v.content.classList.contains('open');
+    const T = 2 * Math.PI / OMEGA;
+    PTS4.forEach(p => {
+      const rp = p.r * DPXPM;
+      if (s.traceOn) drawTrace(g, COL[p.id], rp, s.traceReset, th);
+      el('line', { x1: CX, y1: CY, x2: CX + rp * Math.cos(th), y2: CY - rp * Math.sin(th), stroke: '#cbd5e1', 'stroke-width': 1.5 }, g);
+    });
+    el('line', { x1: CX, y1: CY, x2: CX + R_DISK * DPXPM * Math.cos(th), y2: CY - R_DISK * DPXPM * Math.sin(th), stroke: '#94a3b8', 'stroke-width': 2 }, g);
+    PTS4.forEach(p => {
+      const rp = p.r * DPXPM, [x, y] = P(th, rp);
+      if (vReveal) {
+        const v = 2 * Math.PI * p.r / T, tx = -Math.sin(th), ty = -Math.cos(th), scale = 55;
+        el('line', { x1: x, y1: y, x2: x + v * scale * tx, y2: y + v * scale * ty, stroke: COL[p.id], 'stroke-width': 3, 'marker-end': 'url(#arrOk)' }, g);
+      }
+      el('circle', { cx: x, cy: y, r: 12, fill: COL[p.id], stroke: '#fff', 'stroke-width': 3 }, g);
+      txt(x, y + 5, p.id, { 'font-size': 13, 'font-weight': 800, fill: '#fff', 'text-anchor': 'middle' }, g);
+    });
+  },
+  renderLive(s) {
+    const tours = Math.floor(s.rawTheta / (2 * Math.PI));
+    s.refs.live.innerHTML = `<h2>Mesures en direct</h2><div class="liverow">Nombre de tours : <b>${tours}</b></div>`;
+    Object.entries(s.refs.toolBtns).forEach(([id, b]) => { if (id === 'trace') b.classList.toggle('active', s.traceOn); });
+    this.reveals.forEach(d => { const ref = s.refs.reveals[d.id]; if (ref.content.classList.contains('open')) ref.content.innerHTML = d.html(s); });
+  },
+  onReset(s) { s.traceReset = 0; }
+};
+
+/* ================= SCÈNE 5 — Vitesse angulaire ================= */
+let angleUnit = 'rad';
+const scene5 = {
+  title: 'Scène 5 — Découvrir la vitesse angulaire',
+  quote: 'Même angle, même durée : tous les points d\'un disque rigide tournent-ils à la même « vitesse » ?',
+  questions: [
+    'Les trois points ont-ils effectué le même déplacement angulaire ?',
+    'Ont-ils mis le même temps pour effectuer ce déplacement ?',
+    'Que peut-on calculer en divisant l\'angle parcouru par la durée correspondante ?',
+    'Quelle est la différence entre cette grandeur et la vitesse linéaire étudiée précédemment ?'
+  ],
+  reveals: [
+    { id: 'def', label: 'Révéler la définition : ω_moy = Δθ / Δt', html() { return `<div class="formula">ω<sub>moy</sub> = Δθ / Δt</div>`; } },
+    { id: 'val', label: 'Révéler la vitesse angulaire (rotation uniforme)', html(s) {
+      if (s.simTime < 0.3) return `<p>Lancez l'animation pour mesurer ω.</p>`;
+      return `<div class="formula">ω = Δθ / Δt = ${fmtRad(s.rawTheta)} / ${fmt(s.simTime, 2)} ≈ ${fmt(s.rawTheta / s.simTime, 2)} rad/s</div><p>Pour une rotation uniforme, ω est <b>constante</b>.</p>`;
+    } },
+    { id: 'sum', label: 'Révéler la synthèse', html() {
+      return `<p>Tous les points solidaires d'un disque rigide tournant autour d'un axe fixe ont <b>la même vitesse angulaire ω</b> (en rad/s).</p>
+      <p>En revanche, leurs <b>vitesses linéaires</b> (en m/s) sont différentes si leurs rayons sont différents.</p>
+      <p>⚠ Ne pas confondre les unités : ω en <b>rad/s</b>, v en <b>m/s</b>.</p>`;
+    } }
+  ],
+  tools: [{ id: 'mesurer', label: '📐 Mesurer l\'angle', onClick(s) { s.mesurerOn = !s.mesurerOn; } }],
+  initState() { return { simTime: 0, playing: false, mesurerOn: false, rawTheta: 0, revealed: new Set() }; },
+  tick(s, dt) { s.simTime += dt; s.rawTheta = OMEGA * s.simTime; },
+  buildPanel(container, state) {
+    const unitCard = el2('div', { class: 'card' }, container);
+    const h = el2('h2', {}, unitCard); h.textContent = 'Unité de l\'angle';
+    const row = el2('div', { class: 'row unitTabs' }, unitCard);
+    ['deg', 'rad'].forEach(u => {
+      const b = el2('button', {}, row); b.textContent = u === 'deg' ? 'Degrés' : 'Radians';
+      b.classList.toggle('active', u === angleUnit);
+      b.addEventListener('click', () => { angleUnit = u; document.querySelectorAll('.unitTabs button').forEach(x => x.classList.remove('active')); b.classList.add('active'); });
+      unitCard._btn = unitCard._btn || {}; unitCard._btn[u] = b;
+    });
+    buildQuestions(container.appendChild(el2('div', { class: 'card' })), this.questions);
+    state.refs = { toolBtns: buildTools(container, this.tools, state), reveals: buildReveals(container, this.reveals), live: el2('div', { class: 'card hide' }, container), unitBtns: unitCard._btn };
+  },
+  renderBoard(s, g) {
+    g.innerHTML = '';
+    drawDiskBase(g, { noArrow: true });
+    const refR = R_DISK * DPXPM + 22;
+    el('line', { x1: CX, y1: CY, x2: CX + refR, y2: CY, stroke: '#94a3b8', 'stroke-width': 2, 'stroke-dasharray': '7 5' }, g);
+    txt(CX + refR + 10, CY + 5, 'origine (θ=0)', { class: 'small', fill: '#64748b' }, g);
+    const th = s.rawTheta;
+    const ra = 55;
+    if (th > 0.02) {
+      el('path', { d: arcPath(0, th % (2 * Math.PI) === 0 && th > 0 ? 2 * Math.PI - 0.001 : th, ra), stroke: '#7c3aed', 'stroke-width': 3, fill: 'none', 'marker-end': 'url(#arrTheta)' }, g);
+      const [tx, ty] = P((th % (2 * Math.PI)) / 2, ra + 24);
+      withBg(txt(tx, ty + 8, 'θ', { class: 'lbl', fill: '#7c3aed', 'text-anchor': 'middle' }, g), g);
+    }
+    PTS4.forEach(p => {
+      const rp = p.r * DPXPM;
+      el('line', { x1: CX, y1: CY, x2: CX + rp * Math.cos(th), y2: CY - rp * Math.sin(th), stroke: '#cbd5e1', 'stroke-width': 1.5 }, g);
+    });
+    el('line', { x1: CX, y1: CY, x2: CX + R_DISK * DPXPM * Math.cos(th), y2: CY - R_DISK * DPXPM * Math.sin(th), stroke: '#94a3b8', 'stroke-width': 2 }, g);
+    PTS4.forEach(p => {
+      const rp = p.r * DPXPM, [x, y] = P(th, rp);
+      el('circle', { cx: x, cy: y, r: 12, fill: COL[p.id], stroke: '#fff', 'stroke-width': 3 }, g);
+      txt(x, y + 5, p.id, { 'font-size': 13, 'font-weight': 800, fill: '#fff', 'text-anchor': 'middle' }, g);
+    });
+  },
+  renderLive(s) {
+    s.refs.live.classList.toggle('hide', !s.mesurerOn);
+    s.refs.toolBtns.mesurer.classList.toggle('active', s.mesurerOn);
+    if (s.mesurerOn) {
+      const th = s.rawTheta, tours = Math.floor(th / (2 * Math.PI));
+      const aStr = angleUnit === 'deg' ? fmtDeg(th) : fmtRad(th) + ' rad';
+      s.refs.live.innerHTML = `<h2>Mesure de l'angle</h2>
+        <div class="liverow">θ = <b>${aStr}</b></div>
+        <div class="liverow">Δt = <b>${fmt(s.simTime, 1)} s</b></div>
+        <div class="liverow">Tours effectués : <b>${tours}</b></div>
+        <div class="liverow">θ<sub>A</sub> = θ<sub>B</sub> = θ<sub>C</sub> = <b>${aStr}</b> (identique pour les trois)</div>`;
+    }
+    this.reveals.forEach(d => { const ref = s.refs.reveals[d.id]; if (ref.content.classList.contains('open')) ref.content.innerHTML = d.html(s); });
+  },
+  onReset() {}
+};
+
+/* ================= SCÈNE 6 — s = Rθ ================= */
+const scene6 = {
+  title: 'Scène 6 — De l\'abscisse angulaire à l\'abscisse curviligne',
+  quote: 'Deux points appartiennent au même disque. Pourquoi ont-ils la même vitesse angulaire mais des vitesses linéaires différentes ?',
+  questions: [
+    'Si on double θ en gardant R fixe, que devient s ?',
+    'Si on double R en gardant θ fixe, que devient s ?',
+    'Comment calculer s à partir de R et de θ ?',
+    'Pourquoi deux points du même disque ont-ils la même vitesse angulaire mais des vitesses linéaires différentes ?'
+  ],
+  reveals: [
+    { id: 'formula', label: 'Révéler la relation s = R·θ', html() { return `<div class="formula">s = R × θ</div><p>À condition que θ soit exprimé en <b>radians</b>.</p>`; } },
+    { id: 'obs1', label: 'Observation : R fixe, θ double', html() {
+      const R = 1, t1 = Math.PI / 3, t2 = 2 * Math.PI / 3;
+      return `<p>Avec R = ${R} m : θ = π/3 rad → s = ${fmt(R * t1, 3)} m. θ = 2π/3 rad (doublé) → s = ${fmt(R * t2, 3)} m <b>(doublé aussi)</b>.</p>`;
+    } },
+    { id: 'obs2', label: 'Observation : θ fixe, R double', html() {
+      const t = Math.PI / 2;
+      return `<p>Avec θ = π/2 rad : R = 0,5 m → s = ${fmt(0.5 * t, 3)} m. R = 1,0 m (doublé) → s = ${fmt(1.0 * t, 3)} m <b>(doublé aussi)</b>.</p>`;
+    } },
+    { id: 'exo', label: 'Exercice : R = 0,50 m et θ = π/2 rad, calculez s',
+      html() { return `<p>s = R × θ = 0,50 × π/2 ≈ <b>${fmt(0.5 * Math.PI / 2, 3)} m</b></p>`; } },
+    { id: 'synth', label: 'Révéler le tableau de synthèse', html() {
+      return `<table class="mini">
+        <tr><th>Grandeur</th><th>Relation</th></tr>
+        <tr><td>Vitesse linéaire</td><td>v = Δs / Δt</td></tr>
+        <tr><td>Vitesse angulaire moyenne</td><td>ω<sub>moy</sub> = Δθ / Δt</td></tr>
+        <tr><td>Lien entre les deux (rotation)</td><td><b>v = R·ω</b></td></tr>
+      </table>`;
+    } },
+    { id: 'concl', label: 'Révéler la conclusion', html() {
+      return `<p><b>Tous les points du disque parcourent le même angle pendant la même durée</b>, mais les points situés plus loin du centre parcourent une plus grande longueur d'arc : leur vitesse linéaire est donc plus grande.</p>`;
+    } }
+  ],
+  tools: [],
+  initState() { return { thetaDeg: 180, R: 0.6, playing: false, simTime: 0, autoRotate: false, refs: null, revealed: new Set() }; },
+  tick(s, dt) { s.simTime += dt; if (s.playing) { s.thetaDeg = (s.thetaDeg + OMEGA * dt * 180 / Math.PI) % 360; if (s.refs) s.refs.thetaSlider.value = s.thetaDeg; } },
+  buildPanel(container, state) {
+    const card = el2('div', { class: 'card' }, container);
+    const h = el2('h2', {}, card); h.textContent = 'Réglages';
+    const l1 = el2('div', { class: 'sliderLine' }, card);
+    el2('span', {}, l1).textContent = 'θ';
+    const thetaSlider = el2('input', { type: 'range', min: '0', max: '360', step: '1', value: state.thetaDeg }, l1);
+    const thetaVal = el2('span', { class: 'val' }, l1);
+    thetaSlider.addEventListener('input', e => { state.thetaDeg = +e.target.value; state.playing = false; syncPlayLabel(); });
+    const l2 = el2('div', { class: 'sliderLine' }, card);
+    el2('span', {}, l2).textContent = 'R';
+    const rSlider = el2('input', { type: 'range', min: '0.2', max: '1', step: '0.05', value: state.R }, l2);
+    const rVal = el2('span', { class: 'val' }, l2);
+    rSlider.addEventListener('input', e => { state.R = +e.target.value; });
+    buildQuestions(container.appendChild(el2('div', { class: 'card' })), this.questions);
+    state.refs = { reveals: buildReveals(container, this.reveals), live: el2('div', { class: 'card' }, container), thetaSlider, thetaVal, rSlider, rVal };
+  },
+  renderBoard(s, g) {
+    g.innerHTML = '';
+    drawDiskBase(g, { noArrow: true });
+    const refR = R_DISK * DPXPM + 22;
+    el('line', { x1: CX, y1: CY, x2: CX + refR, y2: CY, stroke: '#94a3b8', 'stroke-width': 2, 'stroke-dasharray': '7 5' }, g);
+    el('circle', { cx: CX + R_DISK * DPXPM, cy: CY, r: 8, fill: '#fff', stroke: '#1d2433', 'stroke-width': 3 }, g);
+    txt(CX + R_DISK * DPXPM + 14, CY - 10, 'M₀', { class: 'lbl', 'font-size': 18 }, g);
+
+    const th = s.thetaDeg * Math.PI / 180, rp = s.R * DPXPM;
+    if (th > 0.02) el('path', { d: arcPath(0, th, rp), stroke: '#dc2626', 'stroke-width': 7, fill: 'none', 'stroke-linecap': 'round' }, g);
+    el('line', { x1: CX, y1: CY, x2: CX + rp * Math.cos(th), y2: CY - rp * Math.sin(th), stroke: '#475569', 'stroke-width': 3 }, g);
+    const [mx, my] = P(th, rp);
+    el('circle', { cx: mx, cy: my, r: 13, fill: '#dc2626', stroke: '#fff', 'stroke-width': 3 }, g);
+    const [lx, ly] = P(th + 0.15, rp - 32);
+    txt(lx, ly + 8, 'M', { class: 'lbl', 'font-size': 22, fill: '#dc2626', 'text-anchor': 'middle' }, g);
+    withBg(txt((CX + mx) / 2 + 8, (CY + my) / 2 - 8, 'R', { class: 'lbl', fill: '#475569', 'font-size': 16 }, g), g);
+  },
+  renderLive(s) {
+    s.refs.thetaVal.textContent = angleUnit === 'deg' ? Math.round(s.thetaDeg) + '°' : fmtRad(s.thetaDeg * Math.PI / 180) + ' rad';
+    s.refs.rVal.textContent = fmt(s.R, 2) + ' m';
+    const th = s.thetaDeg * Math.PI / 180, arc = s.R * th;
+    s.refs.live.innerHTML = `<h2>Mesures en direct</h2>
+      <div class="liverow">R = <b>${fmt(s.R, 2)} m</b></div>
+      <div class="liverow">θ = <b>${fmtDeg(th)}</b> = <b>${fmtRad(th)} rad</b></div>
+      <div class="liverow">s = R × θ = <b>${fmt(arc, 3)} m</b></div>`;
+    this.reveals.forEach(d => { const ref = s.refs.reveals[d.id]; if (ref.content.classList.contains('open')) ref.content.innerHTML = d.html(s); });
+  },
+  onReset(s) { s.refs.thetaSlider.value = 180; s.refs.rSlider.value = 0.6; }
+};
+
+/* ================= Shell : navigation, transport, boucle ================= */
+const scenes = [scene1, scene2, scene3, scene4, scene5, scene6];
+const sceneStates = scenes.map(s => s.initState());
+const panelsBuilt = [false, false, false, false, false, false];
+let current = 0, globalSpeed = 1;
+
+function ensurePanel(i) {
+  if (panelsBuilt[i]) return;
+  const wrap = el2('div', { id: 'panel' + i, class: 'scenePanel' }, $('panels'));
+  scenes[i].buildPanel(wrap, sceneStates[i]);
+  panelsBuilt[i] = true;
+}
+function syncPlayLabel() {
+  const s = sceneStates[current];
+  $('playBtn').textContent = s.playing ? '⏸ Pause' : (s.simTime > 0 ? '▶ Reprendre' : '▶ Démarrer');
+}
+function buildProgress() {
+  const p = $('progress'); p.innerHTML = '';
+  scenes.forEach((sc, i) => {
+    const seg = el2('div', { class: 'seg' }, p);
+    seg.addEventListener('click', () => goTo(i));
+    p._segs = p._segs || []; p._segs.push(seg);
+  });
+}
+function updateProgress() {
+  $('progress')._segs.forEach((seg, i) => {
+    seg.classList.toggle('active', i === current);
+    seg.classList.toggle('done', i < current);
+  });
+}
+function goTo(i) {
+  current = Math.max(0, Math.min(scenes.length - 1, i));
+  ensurePanel(current);
+  document.querySelectorAll('.scenePanel').forEach((p, idx) => p.classList.toggle('hide', idx !== current));
+  $('sceneTitle').textContent = scenes[current].title;
+  $('quote').textContent = scenes[current].quote || '';
+  $('prevBtn').disabled = current === 0;
+  $('nextBtn').disabled = current === scenes.length - 1;
+  updateProgress();
+  syncPlayLabel();
+  $('chrono').textContent = 'Δt = ' + fmt(sceneStates[current].simTime, 1) + ' s';
+}
+
+$('playBtn').addEventListener('click', () => { const s = sceneStates[current]; s.playing = !s.playing; syncPlayLabel(); });
+$('resetBtn').addEventListener('click', () => {
+  const sc = scenes[current], s = sceneStates[current];
+  const refs = s.refs;
+  const fresh = sc.initState();
+  Object.keys(s).forEach(k => delete s[k]);
+  Object.assign(s, fresh, { refs });
+  document.querySelectorAll('#panel' + current + ' .reveal button').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('#panel' + current + ' .reveal .content').forEach(c => c.classList.remove('open'));
+  if (sc.onReset) sc.onReset(s);
+  syncPlayLabel();
+});
+document.querySelectorAll('#speedRow button').forEach(b => b.addEventListener('click', () => {
+  globalSpeed = +b.dataset.sp;
+  document.querySelectorAll('#speedRow button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+}));
+$('prevBtn').addEventListener('click', () => goTo(current - 1));
+$('nextBtn').addEventListener('click', () => goTo(current + 1));
+$('fs').addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); });
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); $('playBtn').click(); }
+  else if (k === 'arrowright') goTo(current + 1);
+  else if (k === 'arrowleft') goTo(current - 1);
+  else if (k === 'f') $('fs').click();
+});
+
+let last = performance.now();
+function loop(now) {
+  const dtReal = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  const sc = scenes[current], s = sceneStates[current];
+  const dtSim = dtReal * globalSpeed;
+  if (s.playing) { sc.tick(s, dtSim); }
+  sc.renderBoard(s, $('board-g'));
+  if (s.refs) sc.renderLive(s);
+  $('chrono').textContent = 'Δt = ' + fmt(s.simTime, 1) + ' s';
+  if (!s.playing) syncPlayLabel();
+  requestAnimationFrame(loop);
+}
+
+buildProgress();
+goTo(0);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
